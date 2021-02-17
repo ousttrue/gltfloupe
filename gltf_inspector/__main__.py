@@ -1,39 +1,82 @@
-import sys
-import random
-from PySide6 import QtCore, QtWidgets, QtGui
+from logging import getLogger
+logger = getLogger(__name__)
+from PySide2 import QtWidgets
+from OpenGL.GL import *
 
 
-class MyWidget(QtWidgets.QWidget):
+class Controller:
+    """
+    [CLASSES] Controllerクラスは、glglueの規約に沿って以下のコールバックを実装する
+    """
     def __init__(self):
-        super().__init__()
+        pass
 
-        self.hello = ["Hallo Welt", "Hei maailma", "Hola Mundo", "Привет мир"]
+    def onResize(self, w, h):
+        logger.debug('onResize: %d, %d', w, h)
+        glViewport(0, 0, w, h)
 
-        self.button = QtWidgets.QPushButton("Click me!")
-        self.text = QtWidgets.QLabel("Hello World",
-                                     alignment=QtCore.Qt.AlignCenter)
+    def onLeftDown(self, x, y):
+        logger.debug('onLeftDown: %d, %d', x, y)
 
-        self.layout = QtWidgets.QVBoxLayout(self)
-        self.layout.addWidget(self.text)
-        self.layout.addWidget(self.button)
+    def onLeftUp(self, x, y):
+        logger.debug('onLeftUp: %d, %d', x, y)
 
-        self.button.clicked.connect(self.magic)
+    def onMiddleDown(self, x, y):
+        logger.debug('onMiddleDown: %d, %d', x, y)
 
-    @QtCore.Slot()
-    def magic(self):
-        self.text.setText(random.choice(self.hello))
+    def onMiddleUp(self, x, y):
+        logger.debug('onMiddleUp: %d, %d', x, y)
+
+    def onRightDown(self, x, y):
+        logger.debug('onRightDown: %d, %d', x, y)
+
+    def onRightUp(self, x, y):
+        logger.debug('onRightUp: %d, %d', x, y)
+
+    def onMotion(self, x, y):
+        logger.debug('onMotion: %d, %d', x, y)
+
+    def onWheel(self, d):
+        logger.debug('onWheel: %d', d)
+
+    def onKeyDown(self, keycode):
+        logger.debug('onKeyDown: %d', keycode)
+
+    def onUpdate(self, d):
+        #logger.debug('onUpdate: delta %d ms', d)
+        pass
+
+    def draw(self):
+        glClearColor(0.0, 0.0, 1.0, 0.0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        glBegin(GL_TRIANGLES)
+        glVertex(-1.0, -1.0)
+        glVertex(1.0, -1.0)
+        glVertex(0.0, 1.0)
+        glEnd()
+
+        glFlush()
 
 
-def hello():
-    app = QtWidgets.QApplication([])
+class Window(QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        import glglue.pyside2gl
+        super().__init__(parent)
+        # setup opengl widget
+        self.controller = Controller()
+        self.glwidget = glglue.pyside2gl.Widget(self, self.controller)
+        self.setCentralWidget(self.glwidget)
 
-    widget = MyWidget()
-    widget.resize(800, 600)
-    widget.show()
 
+def run():
+    import sys
+    from logging import basicConfig, DEBUG
+    basicConfig(format='%(levelname)s:%(name)s:%(message)s', level=DEBUG)
+    app = QtWidgets.QApplication(sys.argv)
+    window = Window()
+    window.show()
     sys.exit(app.exec_())
 
 
-print(__name__)
-hello()
-
+run()
