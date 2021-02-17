@@ -1,7 +1,10 @@
 from logging import getLogger
 logger = getLogger(__name__)
-from PySide2 import QtWidgets
+import pathlib
 from OpenGL.GL import *
+from PySide2.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog
+from PySide2 import QtCore
+from PySide2.QtGui import QIcon
 
 
 class Controller:
@@ -59,7 +62,7 @@ class Controller:
         glFlush()
 
 
-class Window(QtWidgets.QMainWindow):
+class Window(QMainWindow):
     def __init__(self, parent=None):
         import glglue.pyside2gl
         super().__init__(parent)
@@ -67,14 +70,55 @@ class Window(QtWidgets.QMainWindow):
         self.controller = Controller()
         self.glwidget = glglue.pyside2gl.Widget(self, self.controller)
         self.setCentralWidget(self.glwidget)
+        self.create_menu()
+
+    def create_menu(self):
+        mainMenu = self.menuBar()
+        fileMenu = mainMenu.addMenu("File")
+        # viewMenu = mainMenu.addMenu("View")
+        # editMenu = mainMenu.addMenu("Edit")
+        # searchMenu = mainMenu.addMenu("Font")
+        # helpMenu = mainMenu.addMenu("Help")
+
+        openAction = QAction(QIcon('open.png'), "Open", self)
+        openAction.setShortcut("Ctrl+O")
+        openAction.triggered.connect(self.open_dialog)
+        fileMenu.addAction(openAction)
+
+        # saveAction = QAction(QIcon('save.png'), "Save", self)
+        # saveAction.setShortcut("Ctrl+S")
+        # fileMenu.addAction(saveAction)
+
+        exitAction = QAction(QIcon('exit.png'), "Exit", self)
+        exitAction.setShortcut("Ctrl+X")
+        exitAction.triggered.connect(self.exit_app)
+        fileMenu.addAction(exitAction)
+
+    def exit_app(self):
+        self.close()
+
+    def open_dialog(self):
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg.setFilter(QtCore.QDir.Files)
+        dlg.setNameFilters(['*.gltf;*.glb;*.vrm;*.vci', '*'])
+        if dlg.exec_():
+            filenames = dlg.selectedFiles()
+            if filenames and len(filenames) > 0:
+                self.open(pathlib.Path(filenames[0]))
+
+    def open(self, file: pathlib.Path):
+        print(file)
 
 
 def run():
     import sys
     from logging import basicConfig, DEBUG
     basicConfig(format='%(levelname)s:%(name)s:%(message)s', level=DEBUG)
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     window = Window()
+    if len(sys.argv) > 1:
+        window.open(pathlib.Path(sys.argv[1]))
     window.show()
     sys.exit(app.exec_())
 

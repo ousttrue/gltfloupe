@@ -8,7 +8,10 @@
             "name": "gltf_inspector",
             "type": "python",
             "request": "launch",
-            "module": "gltf_inspector"
+            "module": "gltf_inspector",
+            "args": [
+                "${env:GLTF_SAMPLE_MODELS}/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
+            ]
         }
     ]
 }
