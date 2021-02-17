@@ -2,9 +2,9 @@ from logging import getLogger
 logger = getLogger(__name__)
 import pathlib
 from OpenGL.GL import *
-from PySide2.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog
+from PySide2.QtWidgets import QApplication, QMainWindow, QAction, QFileDialog, QTreeView, QDockWidget
 from PySide2 import QtCore
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import *
 
 
 class Controller:
@@ -66,11 +66,20 @@ class Window(QMainWindow):
     def __init__(self, parent=None):
         import glglue.pyside2gl
         super().__init__(parent)
+
+        self.resize(800, 600)
+
         # setup opengl widget
         self.controller = Controller()
         self.glwidget = glglue.pyside2gl.Widget(self, self.controller)
         self.setCentralWidget(self.glwidget)
         self.create_menu()
+
+        # left json tree
+        dock_left = QDockWidget("json", self)
+        self.addDockWidget(Qt.LeftDockWidgetArea, dock_left)
+        self.json_tree = QTreeView(dock_left)
+        dock_left.setWidget(self.json_tree)
 
     def create_menu(self):
         mainMenu = self.menuBar()
@@ -109,6 +118,17 @@ class Window(QMainWindow):
 
     def open(self, file: pathlib.Path):
         print(file)
+        self.setWindowTitle(str(file.name))
+
+        ext = file.suffix.lower()
+        gltf_json = None
+        if ext == '.gltf':
+            gltf_json = file.read_text(encoding='utf-8')
+        elif ext in ['.glb', '.vrm', '.vci']:
+            from . import glb
+            gltf_json, bin = glb.parse_glb(file.read_bytes())
+        else:
+            print(f'unknown: {ext}')
 
 
 def run():
