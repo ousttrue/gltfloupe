@@ -10,7 +10,7 @@ class Item:
         self.children = []
 
     def columnCount(self) -> int:
-        return 1
+        return 2
 
     def add_child(self, child):
         self.children.append(child)
@@ -23,11 +23,12 @@ class Item:
         return self.children[row]
 
     def data(self, column):
-        if self.value is None:
+        if column == 0:
             return self.name
-
-        # leaf
-        return f'{self.value}'
+        elif column == 1:
+            return self.value
+        else:
+            raise Exception()
 
     def parent(self):
         return self.parentItem
@@ -88,8 +89,15 @@ class TreeModel(QtCore.QAbstractItemModel):
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
     def headerData(self, section, orientation, role):
-        # if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-        #     return self.rootItem.data(section)
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            # return self.rootItem.data(section)
+            if section == 0:
+                return 'property'
+            elif section == 1:
+                return 'value'
+            else:
+                raise Exception()
+
         return None
 
     def index(self, row, column, parent):

@@ -67,7 +67,7 @@ class Window(QMainWindow):
         import glglue.pyside2gl
         super().__init__(parent)
 
-        self.resize(800, 600)
+        self.resize(1280, 1024)
 
         # setup opengl widget
         self.controller = Controller()
