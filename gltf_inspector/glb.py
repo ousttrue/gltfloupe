@@ -1,5 +1,4 @@
 import struct
-import json
 
 
 class Reader:
@@ -57,4 +56,4 @@ def parse_glb(data: bytes):
         else:
             raise Exception(f'unknown chunk_type: {chunk_type}')
 
-    return json.loads(json_str), body
+    return json_str, body

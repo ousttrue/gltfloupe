@@ -122,13 +122,21 @@ class Window(QMainWindow):
 
         ext = file.suffix.lower()
         gltf_json = None
+        import json
         if ext == '.gltf':
-            gltf_json = file.read_text(encoding='utf-8')
+            gltf_json_src = file.read_text(encoding='utf-8')
+            self.open_json(json.loads(gltf_json_src))
         elif ext in ['.glb', '.vrm', '.vci']:
             from . import glb
-            gltf_json, bin = glb.parse_glb(file.read_bytes())
+            gltf_json_src, bin = glb.parse_glb(file.read_bytes())
+            self.open_json(json.loads(gltf_json_src))
         else:
             print(f'unknown: {ext}')
+
+    def open_json(self, json_data):
+        from .json_tree import TreeModel
+        self.json_model = TreeModel(json_data)
+        self.json_tree.setModel(self.json_model)
 
 
 def run():
