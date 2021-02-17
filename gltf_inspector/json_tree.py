@@ -1,4 +1,4 @@
-from PySide2 import QtCore
+from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
 from typing import Optional
 
 
@@ -38,6 +38,16 @@ class Item:
             return self.parentItem.children.index(self)
         return 0
 
+    def get_ancestors(self):
+        yield self
+        if self.parentItem:
+            for x in self.parentItem.get_ancestors():
+                yield x
+
+    def json_path(self) -> str:
+        path = [f'/{x.name}' for x in self.get_ancestors()][:-1]
+        return ''.join(reversed(path))
+
 
 def build(value):
     if isinstance(value, dict):
@@ -61,7 +71,7 @@ def build(value):
         return node
 
 
-class TreeModel(QtCore.QAbstractItemModel):
+class TreeModel(QAbstractItemModel):
     def __init__(self, root: dict, parent=None):
         super(TreeModel, self).__init__(parent)
         self.rootItem = build(root)
@@ -77,7 +87,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         if not index.isValid():
             return None
-        if role != QtCore.Qt.DisplayRole:
+        if role != Qt.DisplayRole:
             return None
         item = index.internalPointer()
         return item.data(index.column())
@@ -85,11 +95,11 @@ class TreeModel(QtCore.QAbstractItemModel):
     def flags(self, index):
 
         if not index.isValid():
-            return QtCore.Qt.NoItemFlags
-        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+            return Qt.NoItemFlags
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def headerData(self, section, orientation, role):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             # return self.rootItem.data(section)
             if section == 0:
                 return 'property'
@@ -110,16 +120,16 @@ class TreeModel(QtCore.QAbstractItemModel):
         if childItem:
             return self.createIndex(row, column, childItem)
         else:
-            return QtCore.QModelIndex()
+            return QModelIndex()
 
-    def parent(self, index):
+    def parent(self, index: QModelIndex) -> QModelIndex:
 
         if not index.isValid():
-            return QtCore.QModelIndex()
+            return QModelIndex()
         childItem = index.internalPointer()
         parentItem = childItem.parent()
         if parentItem == self.rootItem:
-            return QtCore.QModelIndex()
+            return QModelIndex()
         return self.createIndex(parentItem.row(), 0, parentItem)
 
     def rowCount(self, parent):

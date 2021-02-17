@@ -1,4 +1,5 @@
 import struct
+from typing import Tuple
 
 
 class Reader:
@@ -22,7 +23,7 @@ class Reader:
         return result
 
 
-def parse_glb(data: bytes):
+def parse_glb(data: bytes) -> Tuple[bytes, bytes]:
     reader = Reader(data)
     magic = reader.read_str(4)
     if magic != b'glTF':
@@ -35,8 +36,8 @@ def parse_glb(data: bytes):
     size = reader.read_uint()
     size -= 12
 
-    json_str = None
-    body = None
+    glb_json = None
+    glb_bin = None
     while size > 0:
         #print(size)
 
@@ -50,10 +51,15 @@ def parse_glb(data: bytes):
         size -= chunk_size
 
         if chunk_type == b'BIN\x00':
-            body = chunk_data
+            glb_bin = chunk_data
         elif chunk_type == b'JSON':
-            json_str = chunk_data
+            glb_json = chunk_data
         else:
             raise Exception(f'unknown chunk_type: {chunk_type}')
 
-    return json_str, body
+    if not glb_json:
+        raise Exception('no json')
+    if not glb_bin:
+        raise Exception('no bin')
+
+    return glb_json, glb_bin
