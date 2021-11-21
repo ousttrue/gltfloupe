@@ -1,4 +1,3 @@
-# GLTFのビューワー
+# gltf_inspector
 
-なるべく GLTF の生データを維持する。
-デバッグ用。
+glTF debug.
