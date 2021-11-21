@@ -1,26 +1,24 @@
+from . import json_tree
+from PySide6 import QtWidgets, QtCore, QtGui
+from OpenGL import GL
+from typing import Union
+import re
+import pathlib
 from logging import getLogger
 logger = getLogger(__name__)
-import pathlib
-from OpenGL.GL import *
-from PySide2.QtWidgets import (QApplication, QMainWindow, QAction, QFileDialog,
-                               QTreeView, QDockWidget, QTextEdit)
-from PySide2 import QtCore
-from PySide2.QtGui import *
-from . import json_tree
-import re
-from typing import Union
 
 
 class Controller:
     """
     [CLASSES] Controllerクラスは、glglueの規約に沿って以下のコールバックを実装する
     """
+
     def __init__(self):
         pass
 
     def onResize(self, w, h):
         logger.debug('onResize: %d, %d', w, h)
-        glViewport(0, 0, w, h)
+        GL.glViewport(0, 0, w, h)
 
     def onLeftDown(self, x, y):
         logger.debug('onLeftDown: %d, %d', x, y)
@@ -54,21 +52,22 @@ class Controller:
         pass
 
     def draw(self):
-        glClearColor(0.0, 0.0, 1.0, 0.0)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        GL.glClearColor(0.0, 0.0, 1.0, 0.0)
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT |
+                   GL.GL_DEPTH_BUFFER_BIT)  # type: ignore
 
-        glBegin(GL_TRIANGLES)
-        glVertex(-1.0, -1.0)
-        glVertex(1.0, -1.0)
-        glVertex(0.0, 1.0)
-        glEnd()
+        GL.glBegin(GL.GL_TRIANGLES)
+        GL.glVertex(-1.0, -1.0)
+        GL.glVertex(1.0, -1.0)
+        GL.glVertex(0.0, 1.0)
+        GL.glEnd()
 
-        glFlush()
+        GL.glFlush()
 
 
-class Window(QMainWindow):
+class Window(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
-        import glglue.pyside2gl
+        # import glglue.PySide6gl
         super().__init__(parent)
 
         self.resize(1280, 1024)
@@ -76,19 +75,19 @@ class Window(QMainWindow):
 
         # # setup opengl widget
         # self.controller = Controller()
-        # self.glwidget = glglue.pyside2gl.Widget(self, self.controller)
+        # self.glwidget = glglue.PySide6gl.Widget(self, self.controller)
         # self.setCentralWidget(self.glwidget)
-        
+
         # left json tree
-        self.dock_left = QDockWidget("json", self)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_left)
-        self.json_tree = QTreeView(self.dock_left)
+        self.dock_left = QtWidgets.QDockWidget("json", self)
+        self.addDockWidget(QtGui.Qt.LeftDockWidgetArea, self.dock_left)
+        self.json_tree = QtWidgets.QTreeView(self.dock_left)
         self.dock_left.setWidget(self.json_tree)
 
         # right selected panel
-        self.dock_right = QDockWidget("active", self)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_right)
-        self.text = QTextEdit(self)
+        self.dock_right = QtWidgets.QDockWidget("active", self)
+        self.addDockWidget(QtGui.Qt.RightDockWidgetArea, self.dock_right)
+        self.text = QtWidgets.QTextEdit(self)
         self.dock_right.setWidget(self.text)
 
     def create_menu(self):
@@ -99,26 +98,26 @@ class Window(QMainWindow):
         # searchMenu = mainMenu.addMenu("Font")
         # helpMenu = mainMenu.addMenu("Help")
 
-        openAction = QAction(QIcon('open.png'), "Open", self)
+        openAction = QtGui.QAction(QtGui.QIcon('open.png'), "Open", self)
         openAction.setShortcut("Ctrl+O")
-        openAction.triggered.connect(self.open_dialog)
+        openAction.triggered.connect(self.open_dialog) # type: ignore
         fileMenu.addAction(openAction)
 
         # saveAction = QAction(QIcon('save.png'), "Save", self)
         # saveAction.setShortcut("Ctrl+S")
         # fileMenu.addAction(saveAction)
 
-        exitAction = QAction(QIcon('exit.png'), "Exit", self)
+        exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), "Exit", self)
         exitAction.setShortcut("Ctrl+X")
-        exitAction.triggered.connect(self.exit_app)
+        exitAction.triggered.connect(self.exit_app) # type: ignore
         fileMenu.addAction(exitAction)
 
     def exit_app(self):
         self.close()
 
     def open_dialog(self):
-        dlg = QFileDialog()
-        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg = QtWidgets.QFileDialog()
+        dlg.setFileMode(QtWidgets.QFileDialog.AnyFile)
         dlg.setFilter(QtCore.QDir.Files)
         dlg.setNameFilters(['*.gltf;*.glb;*.vrm;*.vci', '*'])
         if dlg.exec_():
@@ -146,8 +145,8 @@ class Window(QMainWindow):
     def open_json(self, gltf_json: dict, bin: Union[bytes, pathlib.Path]):
         self.json_model = json_tree.TreeModel(gltf_json)
         self.json_tree.setModel(self.json_model)
-        self.json_tree.selectionModel().selectionChanged.connect(
-            self.on_selected)
+        self.json_tree.selectionModel().selectionChanged.connect( # type: ignore
+            self.on_selected) 
 
         self.gltf_json = gltf_json
         if isinstance(bin, bytes):
@@ -180,7 +179,7 @@ def run():
     import sys
     from logging import basicConfig, DEBUG
     basicConfig(format='%(levelname)s:%(name)s:%(message)s', level=DEBUG)
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     window = Window()
     if len(sys.argv) > 1:
         window.open(pathlib.Path(sys.argv[1]))

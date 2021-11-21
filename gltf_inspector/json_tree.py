@@ -1,4 +1,4 @@
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
+from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 from typing import Optional
 
 
