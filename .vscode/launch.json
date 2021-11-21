@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "gltf_inspector",
+            "name": "gltfloupe",
             "type": "python",
             "request": "launch",
-            "module": "gltf_inspector",
+            "module": "gltfloupe",
             "args": [
                 "${env:GLTF_SAMPLE_MODELS}/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
             ]

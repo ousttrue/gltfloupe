@@ -1,3 +1,3 @@
-# gltf_inspector
+# gltfloupe 🔎
 
 glTF debug.
