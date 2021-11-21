@@ -1,3 +1,5 @@
 # gltfloupe 🔎
 
-glTF debug.
+glTF viewer.
+
+`pip install gltfloupe`
