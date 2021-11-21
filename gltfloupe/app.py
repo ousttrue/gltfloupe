@@ -1,71 +1,20 @@
 from . import json_tree
 from PySide6 import QtWidgets, QtCore, QtGui
-from OpenGL import GL
-from typing import Union
+from typing import Optional, Union
 import re
 import pathlib
 from logging import getLogger
 logger = getLogger(__name__)
 
 
-class Controller:
-    """
-    [CLASSES] Controllerクラスは、glglueの規約に沿って以下のコールバックを実装する
-    """
-
-    def __init__(self):
-        pass
-
-    def onResize(self, w, h):
-        logger.debug('onResize: %d, %d', w, h)
-        GL.glViewport(0, 0, w, h)
-
-    def onLeftDown(self, x, y):
-        logger.debug('onLeftDown: %d, %d', x, y)
-
-    def onLeftUp(self, x, y):
-        logger.debug('onLeftUp: %d, %d', x, y)
-
-    def onMiddleDown(self, x, y):
-        logger.debug('onMiddleDown: %d, %d', x, y)
-
-    def onMiddleUp(self, x, y):
-        logger.debug('onMiddleUp: %d, %d', x, y)
-
-    def onRightDown(self, x, y):
-        logger.debug('onRightDown: %d, %d', x, y)
-
-    def onRightUp(self, x, y):
-        logger.debug('onRightUp: %d, %d', x, y)
-
-    def onMotion(self, x, y):
-        logger.debug('onMotion: %d, %d', x, y)
-
-    def onWheel(self, d):
-        logger.debug('onWheel: %d', d)
-
-    def onKeyDown(self, keycode):
-        logger.debug('onKeyDown: %d', keycode)
-
-    def onUpdate(self, d):
-        #logger.debug('onUpdate: delta %d ms', d)
-        pass
-
-    def draw(self):
-        GL.glClearColor(0.0, 0.0, 1.0, 0.0)
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT |
-                   GL.GL_DEPTH_BUFFER_BIT)  # type: ignore
-
-        GL.glBegin(GL.GL_TRIANGLES)
-        GL.glVertex(-1.0, -1.0)
-        GL.glVertex(1.0, -1.0)
-        GL.glVertex(0.0, 1.0)
-        GL.glEnd()
-
-        GL.glFlush()
-
-
 class Window(QtWidgets.QMainWindow):
+    '''
+    +----+----+----+
+    |json|Open|Prop|
+    |tree|GL  |    |
+    +----+----+----+
+    '''
+
     def __init__(self, parent=None):
         # import glglue.PySide6gl
         super().__init__(parent)
@@ -73,10 +22,14 @@ class Window(QtWidgets.QMainWindow):
         self.resize(1280, 1024)
         self.create_menu()
 
-        # # setup opengl widget
-        # self.controller = Controller()
-        # self.glwidget = glglue.PySide6gl.Widget(self, self.controller)
-        # self.setCentralWidget(self.glwidget)
+        # setup opengl widget
+        import glglue.gl3.samplecontroller
+        self.controller = glglue.gl3.samplecontroller.SampleController()
+        import glglue.pyside6
+        import glglue.utils
+        self.glwidget = glglue.pyside6.Widget(
+            self, self.controller, glglue.utils.get_desktop_scaling_factor())
+        self.setCentralWidget(self.glwidget)
 
         # left json tree
         self.dock_left = QtWidgets.QDockWidget("json", self)
@@ -100,7 +53,7 @@ class Window(QtWidgets.QMainWindow):
 
         openAction = QtGui.QAction(QtGui.QIcon('open.png'), "Open", self)
         openAction.setShortcut("Ctrl+O")
-        openAction.triggered.connect(self.open_dialog) # type: ignore
+        openAction.triggered.connect(self.open_dialog)  # type: ignore
         fileMenu.addAction(openAction)
 
         # saveAction = QAction(QIcon('save.png'), "Save", self)
@@ -109,7 +62,7 @@ class Window(QtWidgets.QMainWindow):
 
         exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), "Exit", self)
         exitAction.setShortcut("Ctrl+X")
-        exitAction.triggered.connect(self.exit_app) # type: ignore
+        exitAction.triggered.connect(self.exit_app)  # type: ignore
         fileMenu.addAction(exitAction)
 
     def exit_app(self):
@@ -128,32 +81,26 @@ class Window(QtWidgets.QMainWindow):
     def open(self, file: pathlib.Path):
         print(file)
         self.setWindowTitle(str(file.name))
+        import glglue.gltf
+        self.gltf = glglue.gltf.parse_path(file)
 
-        ext = file.suffix.lower()
-        gltf_json = None
-        import json
-        if ext == '.gltf':
-            gltf_json_src = file.read_text(encoding='utf-8')
-            self.open_json(json.loads(gltf_json_src), file.parent)
-        elif ext in ['.glb', '.vrm', '.vci']:
-            from . import glb
-            gltf_json_src, bin = glb.parse_glb(file.read_bytes())
-            self.open_json(json.loads(gltf_json_src), bin)
-        else:
-            print(f'unknown: {ext}')
+        # opengl
+        import glglue.gltf_loader
+        loader = glglue.gltf_loader.GltfLoader(self.gltf)
+        scene = loader.load()
+        self.controller.drawables = [scene]
+        self.glwidget.repaint()
 
-    def open_json(self, gltf_json: dict, bin: Union[bytes, pathlib.Path]):
+        # json
+        self.open_json(self.gltf.gltf, file, self.gltf.bin)
+
+    def open_json(self, gltf_json: dict, path: pathlib.Path, bin: Optional[bytes]):
+        self.gltf_json = gltf_json
         self.json_model = json_tree.TreeModel(gltf_json)
         self.json_tree.setModel(self.json_model)
-        self.json_tree.selectionModel().selectionChanged.connect( # type: ignore
-            self.on_selected) 
-
-        self.gltf_json = gltf_json
-        if isinstance(bin, bytes):
-            from .gltf_buffer_accessor import GlbBuffer
-            self.bin = GlbBuffer(self.gltf_json, bin)
-        else:
-            NotImplementedError()
+        self.json_tree.selectionModel().selectionChanged.connect(  # type: ignore
+            self.on_selected)
+        self.bin = bin
 
     def on_selected(self, selected, deselected):
         selected = selected.indexes()
@@ -165,14 +112,15 @@ class Window(QtWidgets.QMainWindow):
 
         json_path = item.json_path()
         m = re.match(r'^/skins/(\d+)$', json_path)
-        if m:
+        if self.gltf and m:
             groups = m.groups()
             skin_index = int(groups[0])
             from . import skin_debug
             self.text.setText(
-                skin_debug.info(self.bin, self.gltf_json, skin_index))
+                skin_debug.info(self.gltf, skin_index))
         else:
             self.text.setText(json_path)
+
 
 def run():
     import sys
