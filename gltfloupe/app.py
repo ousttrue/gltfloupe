@@ -43,6 +43,14 @@ class Window(QtWidgets.QMainWindow):
         self.text = QtWidgets.QTextEdit(self)
         self.dock_right.setWidget(self.text)
 
+        # logger
+        import logging
+        self.logger = glglue.pyside6.QPlainTextEditLogger(self)
+        logging.getLogger('').addHandler(self.logger.log_handler)
+        self.dock_bottom = QtWidgets.QDockWidget("logger", self)
+        self.addDockWidget(QtGui.Qt.BottomDockWidgetArea, self.dock_bottom)
+        self.dock_bottom.setWidget(self.logger)
+
     def create_menu(self):
         mainMenu = self.menuBar()
         fileMenu = mainMenu.addMenu("File")
@@ -79,10 +87,10 @@ class Window(QtWidgets.QMainWindow):
                 self.open(pathlib.Path(filenames[0]))
 
     def open(self, file: pathlib.Path):
-        print(file)
+        logger.info(f'load: {file.name}')
         self.setWindowTitle(str(file.name))
-        import glglue.gltf
-        self.gltf = glglue.gltf.parse_path(file)
+        import gltfio
+        self.gltf = gltfio.parse_path(file)
 
         # opengl
         import glglue.gltf_loader
