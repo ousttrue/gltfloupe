@@ -109,7 +109,10 @@ class Window(QtWidgets.QMainWindow):
 
     def open_json(self, gltf_json: dict, path: pathlib.Path, bin: Optional[bytes]):
         self.gltf_json = gltf_json
-        self.json_model = json_tree.TreeModel(gltf_json)
+
+        icon = self.style().standardIcon(QtWidgets.QStyle.SP_DirClosedIcon)
+
+        self.json_model = json_tree.TreeModel(gltf_json, icon)
         self.json_tree.setModel(self.json_model)
         self.json_tree.selectionModel().selectionChanged.connect(  # type: ignore
             self.on_selected)
