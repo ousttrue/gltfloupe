@@ -88,19 +88,24 @@ class Window(QtWidgets.QMainWindow):
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
-        self.setWindowTitle(str(file.name))
+
         import gltfio
-        self.gltf = gltfio.parse_path(file)
+        try:
+            self.gltf = gltfio.parse_path(file)
+            self.setWindowTitle(str(file.name))
 
-        # opengl
-        from .gltf_loader import GltfLoader
-        loader = GltfLoader(self.gltf)
-        scene = loader.load()
-        self.controller.drawables = [scene]
-        self.glwidget.repaint()
+            # opengl
+            from .gltf_loader import GltfLoader
+            loader = GltfLoader(self.gltf)
+            scene = loader.load()
+            self.controller.drawables = [scene]
+            self.glwidget.repaint()
 
-        # json
-        self.open_json(self.gltf.gltf, file, self.gltf.bin)
+            # json
+            self.open_json(self.gltf.gltf, file, self.gltf.bin)
+
+        except Exception as e:
+            logger.error(e)
 
     def open_json(self, gltf_json: dict, path: pathlib.Path, bin: Optional[bytes]):
         self.gltf_json = gltf_json
