@@ -93,8 +93,8 @@ class Window(QtWidgets.QMainWindow):
         self.gltf = gltfio.parse_path(file)
 
         # opengl
-        import glglue.gltf_loader
-        loader = glglue.gltf_loader.GltfLoader(self.gltf)
+        from .gltf_loader import GltfLoader
+        loader = GltfLoader(self.gltf)
         scene = loader.load()
         self.controller.drawables = [scene]
         self.glwidget.repaint()
