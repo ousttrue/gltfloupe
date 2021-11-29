@@ -1,5 +1,5 @@
 from PySide6 import QtCore, QtGui, QtWidgets
-from typing import Optional
+from typing import Optional, Dict
 
 
 class Item:
@@ -44,9 +44,15 @@ class Item:
             for x in self.parentItem.get_ancestors():
                 yield x
 
-    def json_path(self) -> str:
-        path = [f'/{x.name}' for x in self.get_ancestors()][:-1]
-        return ''.join(reversed(path))
+    def get_ancestors_reverse(self):
+        if self.parentItem:
+            for x in self.parentItem.get_ancestors_reverse():
+                yield x
+        yield self
+
+    def json_path(self) -> tuple:
+        path = tuple(x.name for x in self.get_ancestors_reverse())
+        return path[1:]
 
 
 def build(value):
@@ -72,10 +78,10 @@ def build(value):
 
 
 class TreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, root: dict, icon, parent=None):
+    def __init__(self, root: dict, icon_map: Dict[str, QtGui.QIcon], parent=None):
         super(TreeModel, self).__init__(parent)
         self.rootItem = build(root)
-        self.icon = icon
+        self.icon_map = icon_map
 
     def columnCount(self, parent):
         if parent.isValid():
@@ -130,15 +136,38 @@ class TreeModel(QtCore.QAbstractItemModel):
         if not index.isValid():
             return None
 
-        item = index.internalPointer()
+        item: Item = index.internalPointer()
         match role:
             case QtCore.Qt.DisplayRole:
+                # name, value
+                if index.column() == 1:
+                    match item.json_path():
+                        case (x, i) if i.isdigit():
+                            found = [
+                                child.value for child in item.children if child.name == 'name']
+                            if found:
+                                return found[0]
+
                 return item.data(index.column())
 
             case QtCore.Qt.DecorationRole:
                 # icon
-                if index.column() == 0 and item.children:
-                    return self.icon
+                if index.column() == 0:
+                    match item.json_path():
+                        case ('nodes',) | ('scenes',) | ('scene',):
+                            return self.icon_map['node']
+
+                        case ('buffers',) | ('bufferViews',) | ('accessors',):
+                            return self.icon_map['buffer']
+
+                        case ('materials',) | ('textures',) | ('images',) | ('samplers',):
+                            return self.icon_map['material']
+
+                        case ('meshes',) | ('skins',):
+                            return self.icon_map['mesh']
+
+                    if item.children:
+                        return self.icon_map['folder']
 
     def flags(self, index):
 

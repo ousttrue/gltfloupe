@@ -37,6 +37,14 @@ class Window(QtWidgets.QMainWindow):
         self.json_tree = QtWidgets.QTreeView(self.dock_left)
         self.dock_left.setWidget(self.json_tree)
 
+        self.icon_map = {
+            'folder': self.style().standardIcon(QtWidgets.QStyle.SP_DirClosedIcon),
+            'node': self.style().standardIcon(QtWidgets.QStyle.SP_FileDialogInfoView),
+            'buffer': self.style().standardIcon(QtWidgets.QStyle.SP_DriveHDIcon),
+            'material': self.style().standardIcon(QtWidgets.QStyle.SP_DialogYesButton),
+            'mesh': self.style().standardIcon(QtWidgets.QStyle.SP_DialogNoButton),
+        }
+
         # right selected panel
         self.dock_right = QtWidgets.QDockWidget("active", self)
         self.addDockWidget(QtGui.Qt.RightDockWidgetArea, self.dock_right)
@@ -110,9 +118,7 @@ class Window(QtWidgets.QMainWindow):
     def open_json(self, gltf_json: dict, path: pathlib.Path, bin: Optional[bytes]):
         self.gltf_json = gltf_json
 
-        icon = self.style().standardIcon(QtWidgets.QStyle.SP_DirClosedIcon)
-
-        self.json_model = json_tree.TreeModel(gltf_json, icon)
+        self.json_model = json_tree.TreeModel(gltf_json, self.icon_map)
         self.json_tree.setModel(self.json_model)
         self.json_tree.selectionModel().selectionChanged.connect(  # type: ignore
             self.on_selected)
@@ -126,16 +132,14 @@ class Window(QtWidgets.QMainWindow):
         if not isinstance(item, json_tree.Item):
             return
 
-        json_path = item.json_path()
-        m = re.match(r'^/skins/(\d+)$', json_path)
-        if self.gltf and m:
-            groups = m.groups()
-            skin_index = int(groups[0])
-            from . import skin_debug
-            self.text.setText(
-                skin_debug.info(self.gltf, skin_index))
-        else:
-            self.text.setText(json_path)
+        match item.json_path():
+            case ('skins', skin_index, *_):
+                skin_index = int(skin_index)
+                from . import skin_debug
+                self.text.setText(
+                    skin_debug.info(self.gltf, skin_index))
+            case json_path:
+                self.text.setText('/'.join(json_path))
 
 
 def run():
