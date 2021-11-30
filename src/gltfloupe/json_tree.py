@@ -142,11 +142,13 @@ class TreeModel(QtCore.QAbstractItemModel):
                 # name, value
                 if index.column() == 1:
                     match item.json_path():
+                        case ('nodes',) | ('meshes',) | ('materials',) | ('textures',) | ('samplers',) | ('images',) | ('accessors',) | ('bufferViews',) | ('buffers',) | ('scenes',) | ('animations',) | ('skins',):
+                            return f'({len(item.children)})'
                         case (x, i) if i.isdigit():
                             found = [
                                 child.value for child in item.children if child.name == 'name']
                             if found:
-                                return found[0]
+                                return f'({found[0]})'
 
                 return item.data(index.column())
 
