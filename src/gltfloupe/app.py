@@ -106,13 +106,17 @@ class Window(QtWidgets.QMainWindow):
             loader = GltfLoader(self.gltf)
             scene = loader.load()
             self.controller.drawables = [scene]
+            from glglue.ctypesmath import AABB
+            aabb = AABB.new_empty()
+            aabb = scene.expand_aabb(aabb)
+            self.controller.camera.fit(*aabb)
             self.glwidget.repaint()
 
             # json
             self.open_json(self.gltf.gltf, file, self.gltf.bin)
 
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
 
     def open_json(self, gltf_json: dict, path: pathlib.Path, bin: Optional[bytes]):
         self.gltf_json = gltf_json
