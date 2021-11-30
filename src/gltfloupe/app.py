@@ -105,7 +105,7 @@ class Window(QtWidgets.QMainWindow):
             from .gltf_loader import GltfLoader
             loader = GltfLoader(self.gltf)
             scene = loader.load()
-            self.controller.drawables = [scene]
+            self.controller.scene.drawables = [scene]
             from glglue.ctypesmath import AABB
             aabb = AABB.new_empty()
             aabb = scene.expand_aabb(aabb)
