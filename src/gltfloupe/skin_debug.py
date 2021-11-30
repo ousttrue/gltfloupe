@@ -1,6 +1,7 @@
 import math
 from typing import Tuple
-import glglue.gltf
+from gltfio.types import GltfNode
+from gltfio.parser import GltfData
 
 
 def translation(t) -> str:
@@ -11,12 +12,12 @@ def inverseMatrix(m) -> str:
     return f'[{m[12]:.2f}, {m[13]:.2f}, {m[14]:.2f}, {m[15]:.2f}]'
 
 
-def get_world_position(data: glglue.gltf.GltfData, node: glglue.gltf.GltfNode) -> Tuple[float, float, float]:
+def get_world_position(data: GltfData, node: GltfNode) -> Tuple[float, float, float]:
     # TODO:
     return 0, 0, 0
 
 
-def info(data: glglue.gltf.GltfData, skin_index: int):
+def info(data: GltfData, skin_index: int):
     skin = data.gltf['skins'][skin_index]
     joints = skin['joints']
 
