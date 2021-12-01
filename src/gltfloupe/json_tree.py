@@ -1,5 +1,5 @@
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
-from typing import Optional
+from PySide6 import QtCore, QtGui, QtWidgets
+from typing import Optional, Dict
 
 
 class Item:
@@ -44,9 +44,15 @@ class Item:
             for x in self.parentItem.get_ancestors():
                 yield x
 
-    def json_path(self) -> str:
-        path = [f'/{x.name}' for x in self.get_ancestors()][:-1]
-        return ''.join(reversed(path))
+    def get_ancestors_reverse(self):
+        if self.parentItem:
+            for x in self.parentItem.get_ancestors_reverse():
+                yield x
+        yield self
+
+    def json_path(self) -> tuple:
+        path = tuple(x.name for x in self.get_ancestors_reverse())
+        return path[1:]
 
 
 def build(value):
@@ -71,11 +77,11 @@ def build(value):
         return node
 
 
-class TreeModel(QAbstractItemModel):
-    def __init__(self, root: dict, parent=None):
+class TreeModel(QtCore.QAbstractItemModel):
+    def __init__(self, root: dict, icon_map: Dict[str, QtGui.QIcon], parent=None):
         super(TreeModel, self).__init__(parent)
         self.rootItem = build(root)
-        # self.layoutChanged.emit()
+        self.icon_map = icon_map
 
     def columnCount(self, parent):
         if parent.isValid():
@@ -83,24 +89,8 @@ class TreeModel(QAbstractItemModel):
         else:
             return self.rootItem.columnCount()
 
-    def data(self, index, role):
-
-        if not index.isValid():
-            return None
-        if role != Qt.DisplayRole:
-            return None
-        item = index.internalPointer()
-        return item.data(index.column())
-
-    def flags(self, index):
-
-        if not index.isValid():
-            return Qt.NoItemFlags
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
     def headerData(self, section, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            # return self.rootItem.data(section)
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             if section == 0:
                 return 'property'
             elif section == 1:
@@ -110,34 +100,72 @@ class TreeModel(QAbstractItemModel):
 
         return None
 
-    def index(self, row, column, parent):
-
+    def rowCount(self, parent):
         if not parent.isValid():
+            # root
             parentItem = self.rootItem
         else:
             parentItem = parent.internalPointer()
+
+        return parentItem.childCount()
+
+    def index(self, row, column, parent):
+        if not parent.isValid():
+            # root
+            parentItem = self.rootItem
+        else:
+            parentItem = parent.internalPointer()
+
         childItem = parentItem.child(row)
         if childItem:
             return self.createIndex(row, column, childItem)
         else:
-            return QModelIndex()
+            raise RuntimeError()
 
-    def parent(self, index: QModelIndex) -> QModelIndex:
-
-        if not index.isValid():
-            return QModelIndex()
-        childItem = index.internalPointer()
-        parentItem = childItem.parent()
+    def parent(self, index) -> QtCore.QModelIndex:
+        item = index.internalPointer()
+        parentItem = item.parent()
         if parentItem == self.rootItem:
-            return QModelIndex()
+            # root
+            return QtCore.QModelIndex()
+
         return self.createIndex(parentItem.row(), 0, parentItem)
 
-    def rowCount(self, parent):
+    def data(self, index, role):
+        item: Item = index.internalPointer()
+        match role:
+            case QtCore.Qt.DisplayRole:
+                # name, value
+                if index.column() == 1:
+                    match item.json_path():
+                        case ('nodes',) | ('meshes',) | ('materials',) | ('textures',) | ('samplers',) | ('images',) | ('accessors',) | ('bufferViews',) | ('buffers',) | ('scenes',) | ('animations',) | ('skins',):
+                            return f'({len(item.children)})'
+                        case (x, i) if i.isdigit():
+                            found = [
+                                child.value for child in item.children if child.name == 'name']
+                            if found:
+                                return f'({found[0]})'
 
-        if parent.column() > 0:
-            return 0
-        if not parent.isValid():
-            parentItem = self.rootItem
-        else:
-            parentItem = parent.internalPointer()
-        return parentItem.childCount()
+                return item.data(index.column())
+
+            case QtCore.Qt.DecorationRole:
+                # icon
+                if index.column() == 0:
+                    match item.json_path():
+                        case ('nodes',) | ('scenes',) | ('scene',):
+                            return self.icon_map['node']
+
+                        case ('buffers',) | ('bufferViews',) | ('accessors',):
+                            return self.icon_map['buffer']
+
+                        case ('materials',) | ('textures',) | ('images',) | ('samplers',):
+                            return self.icon_map['material']
+
+                        case ('meshes',) | ('skins',):
+                            return self.icon_map['mesh']
+
+                    if item.children:
+                        return self.icon_map['folder']
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable

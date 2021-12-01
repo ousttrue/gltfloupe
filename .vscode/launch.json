@@ -11,7 +11,8 @@
             "module": "gltfloupe",
             "args": [
                 "${env:GLTF_SAMPLE_MODELS}/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
-            ]
+            ],
+            "justMyCode": false
         }
     ]
 }
