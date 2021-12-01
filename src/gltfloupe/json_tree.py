@@ -101,41 +101,37 @@ class TreeModel(QtCore.QAbstractItemModel):
         return None
 
     def rowCount(self, parent):
-
-        if parent.column() > 0:
-            return 0
         if not parent.isValid():
+            # root
             parentItem = self.rootItem
         else:
             parentItem = parent.internalPointer()
+
         return parentItem.childCount()
 
     def index(self, row, column, parent):
-
         if not parent.isValid():
+            # root
             parentItem = self.rootItem
         else:
             parentItem = parent.internalPointer()
+
         childItem = parentItem.child(row)
         if childItem:
             return self.createIndex(row, column, childItem)
         else:
+            raise RuntimeError()
+
+    def parent(self, index) -> QtCore.QModelIndex:
+        item = index.internalPointer()
+        parentItem = item.parent()
+        if parentItem == self.rootItem:
+            # root
             return QtCore.QModelIndex()
 
-    def parent(self, index: QtCore.QModelIndex) -> QtCore.QModelIndex:
-        if not index.isValid():
-            return QtCore.QModelIndex()
-        childItem = index.internalPointer()
-        parentItem = childItem.parent()  # type: ignore
-        if parentItem == self.rootItem:
-            return QtCore.QModelIndex()
         return self.createIndex(parentItem.row(), 0, parentItem)
 
     def data(self, index, role):
-
-        if not index.isValid():
-            return None
-
         item: Item = index.internalPointer()
         match role:
             case QtCore.Qt.DisplayRole:
@@ -172,7 +168,4 @@ class TreeModel(QtCore.QAbstractItemModel):
                         return self.icon_map['folder']
 
     def flags(self, index):
-
-        if not index.isValid():
-            return QtCore.Qt.NoItemFlags
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
