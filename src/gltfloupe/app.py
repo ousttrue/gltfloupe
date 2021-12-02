@@ -31,9 +31,8 @@ class Window(QtWidgets.QMainWindow):
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
         import glglue.pyside6
-        import glglue.utils
         self.glwidget = glglue.pyside6.Widget(
-            self, self.controller, glglue.utils.get_desktop_scaling_factor())
+            self, self.controller)
         self.setCentralWidget(self.glwidget)
 
         # left json tree
