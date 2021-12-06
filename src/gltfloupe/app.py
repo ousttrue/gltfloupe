@@ -1,96 +1,141 @@
-from typing import Optional, Dict
+import sys
 import pathlib
 import logging
-from PySide6 import QtWidgets, QtCore, QtGui
-from . import json_tree
+import OpenGL.GL as gl
+import glfw
+import imgui
+from imgui.integrations.glfw import GlfwRenderer
 logger = logging.getLogger(__name__)
 
 
-class Window(QtWidgets.QMainWindow):
-    '''
-    +----+----+----+
-    |json|Open|Prop|
-    |tree|GL  |    |
-    +----+----+----+
-    '''
+def docking_space(name: str):
+    flags = (imgui.WINDOW_MENU_BAR
+             | imgui.WINDOW_NO_DOCKING
+             | imgui.WINDOW_NO_BACKGROUND
+             | imgui.WINDOW_NO_TITLE_BAR
+             | imgui.WINDOW_NO_COLLAPSE
+             | imgui.WINDOW_NO_RESIZE
+             | imgui.WINDOW_NO_MOVE
+             | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS
+             | imgui.WINDOW_NO_NAV_FOCUS
+             )
 
-    def __init__(self, parent=None):
-        # import glglue.PySide6gl
-        super().__init__(parent)
-        self.docks: Dict[str, QtWidgets.QDockWidget] = {}
+    viewport = imgui.get_main_viewport()
+    x, y = viewport.pos
+    w, h = viewport.size
+    imgui.set_next_window_position(x, y)
+    imgui.set_next_window_size(w, h)
+    # imgui.set_next_window_viewport(viewport.id)
+    imgui.push_style_var(imgui.STYLE_WINDOW_BORDERSIZE, 0.0)
+    imgui.push_style_var(imgui.STYLE_WINDOW_ROUNDING, 0.0)
 
-        self.icon_map = {
-            'folder': self.style().standardIcon(QtWidgets.QStyle.SP_DirClosedIcon),
-            'node': self.style().standardIcon(QtWidgets.QStyle.SP_FileDialogInfoView),
-            'buffer': self.style().standardIcon(QtWidgets.QStyle.SP_DriveHDIcon),
-            'material': self.style().standardIcon(QtWidgets.QStyle.SP_DialogYesButton),
-            'mesh': self.style().standardIcon(QtWidgets.QStyle.SP_DialogNoButton),
-        }
+    # When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
+    # local window_flags = self.window_flags
+    # if bit.band(self.dockspace_flags, ) ~= 0 then
+    #     window_flags = bit.bor(window_flags, const.ImGuiWindowFlags_.NoBackground)
+    # end
 
-        # setup opengl widget
+    # Important: note that we proceed even if Begin() returns false (aka window is collapsed).
+    # This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
+    # all active windows docked into it will lose their parent and become undocked.
+    # We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
+    # any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
+    imgui.push_style_var(imgui.STYLE_WINDOW_PADDING, (0, 0))
+    imgui.begin(name, None, flags)
+    imgui.pop_style_var()
+    imgui.pop_style_var(2)
+
+    # DockSpace
+    dockspace_id = imgui.get_id(name)
+    imgui.dockspace(dockspace_id, (0, 0), imgui.DOCKNODE_PASSTHRU_CENTRAL_NODE)
+
+    imgui.end()
+
+
+class GlfwWindow:
+    def __init__(self, window_name="minimal ImGui/GLFW3 example", width=1280, height=720) -> None:
+        if not glfw.init():
+            logger.error("Could not initialize OpenGL context")
+            exit(1)
+
+        # OS X supports only forward-compatible core profiles from 3.2
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
+
+        # Create a windowed mode window and its OpenGL context
+        self.window = glfw.create_window(
+            int(width), int(height), window_name, None, None
+        )
+        if not self.window:
+            logger.error("Could not initialize Window")
+            exit(1)
+
+        glfw.make_context_current(self.window)
+
+        # imgui
+        imgui.create_context()
+        self.io = imgui.get_io()
+        self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
+        self.impl = GlfwRenderer(self.window)
+        self.show_custom_window = True
+
+        # gl
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
-        import glglue.pyside6
-        self.glwidget = glglue.pyside6.Widget(
-            self, self.controller)
-        self.setCentralWidget(self.glwidget)
 
-        # left json tree
-        self.json_tree = QtWidgets.QTreeView(self)
-        dock_left = self._add_dock("json", QtGui.Qt.LeftDockWidgetArea)
-        dock_left.setWidget(self.json_tree)
+    def __del__(self):
+        del self.controller
+        self.impl.shutdown()
+        glfw.terminate()
 
-        # right selected panel
-        self.text = QtWidgets.QTextEdit(self)
-        dock_right = self._add_dock("active", QtGui.Qt.RightDockWidgetArea)
-        dock_right.setWidget(self.text)
+    def _update(self):
+        docking_space('docking_space')
 
-        # logger
-        self.logger = glglue.pyside6.QPlainTextEditLogger(self)
-        logging.getLogger('').addHandler(self.logger.log_handler)
-        dock_bottom = self._add_dock("logger", QtGui.Qt.BottomDockWidgetArea)
-        dock_bottom.setWidget(self.logger)
+        if imgui.begin_main_menu_bar():
+            if imgui.begin_menu("File", True):
 
-        # menu
-        self.mainMenu = self.menuBar()
-        self._file_menu(self.mainMenu.addMenu("File"))
-        self._view_menu(self.mainMenu.addMenu("View"))
+                clicked_quit, selected_quit = imgui.menu_item(
+                    "Quit", 'Cmd+Q', False, True
+                )
 
-    def _add_dock(self, name: str, area: QtGui.Qt.Orientation) -> QtWidgets.QDockWidget:
-        dock = QtWidgets.QDockWidget(name, self)
-        self.addDockWidget(area, dock)
-        self.docks[name] = dock
-        return dock
+                if clicked_quit:
+                    exit(1)
 
-    def _file_menu(self, fileMenu: QtWidgets.QMenu):
-        openAction = QtGui.QAction(QtGui.QIcon('open.png'), "Open", self)
-        openAction.setShortcut("Ctrl+O")
-        openAction.triggered.connect(self.open_dialog)  # type: ignore
-        fileMenu.addAction(openAction)
+                imgui.end_menu()
+            imgui.end_main_menu_bar()
 
-        fileMenu.addSeparator()
+        if self.show_custom_window:
+            is_expand, self.show_custom_window = imgui.begin(
+                "Custom window", True)
+            if is_expand:
+                imgui.text("Bar")
+                imgui.text_ansi("B\033[31marA\033[mnsi ")
+                imgui.text_ansi_colored("Eg\033[31mgAn\033[msi ", 0.2, 1., 0.)
+                imgui.extra.text_ansi_colored("Eggs", 0.2, 1., 0.)
+            imgui.end()
 
-        exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), "Exit", self)
-        exitAction.setShortcut("Ctrl+X")
-        exitAction.triggered.connect(self.exit_app)  # type: ignore
-        fileMenu.addAction(exitAction)
+    def new_frame(self) -> bool:
+        if glfw.window_should_close(self.window):
+            return False
+        glfw.poll_events()
+        self.impl.process_inputs()
+        imgui.new_frame()
+        self._update()
+        imgui.render()
 
-    def _view_menu(self, viewMenu: QtWidgets.QMenu):
-        for _, v in self.docks.items():
-            viewMenu.addAction(v.toggleViewAction())
+        return True
 
-    def exit_app(self):
-        self.close()
+    def render(self):
+        # render
+        gl.glClearColor(1., 1., 1., 1)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
-    def open_dialog(self):
-        dlg = QtWidgets.QFileDialog()
-        dlg.setFileMode(QtWidgets.QFileDialog.AnyFile)
-        dlg.setFilter(QtCore.QDir.Files)
-        dlg.setNameFilters(['*.gltf;*.glb;*.vrm;*.vci', '*'])
-        if dlg.exec_():
-            filenames = dlg.selectedFiles()
-            if filenames and len(filenames) > 0:
-                self.open(pathlib.Path(filenames[0]))
+        self.controller.draw()
+
+        self.impl.render(imgui.get_draw_data())
+        glfw.swap_buffers(self.window)
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
@@ -98,7 +143,7 @@ class Window(QtWidgets.QMainWindow):
         import gltfio
         try:
             self.gltf = gltfio.parse_path(file)
-            self.setWindowTitle(str(file.name))
+            self.file = file
 
             # opengl
             from .gltf_loader import GltfLoader
@@ -109,49 +154,23 @@ class Window(QtWidgets.QMainWindow):
             aabb = AABB.new_empty()
             aabb = scene.expand_aabb(aabb)
             self.controller.camera.fit(*aabb)
-            self.glwidget.repaint()
 
             # json
-            self.open_json(self.gltf.gltf, file, self.gltf.bin)
+            # self.open_json(self.gltf.gltf, file, self.gltf.bin)
 
         except Exception as e:
             logger.exception(e)
 
-    def open_json(self, gltf_json: dict, path: pathlib.Path, bin: Optional[bytes]):
-        self.gltf_json = gltf_json
-
-        self.json_model = json_tree.TreeModel(gltf_json, self.icon_map)
-        self.json_tree.setModel(self.json_model)
-        self.json_tree.selectionModel().selectionChanged.connect(  # type: ignore
-            self.on_selected)
-        self.bin = bin
-
-    def on_selected(self, selected, deselected):
-        selected = selected.indexes()
-        if not selected:
-            return
-        item = selected[0].internalPointer()
-        if not isinstance(item, json_tree.Item):
-            return
-
-        match item.json_path():
-            case ('skins', skin_index, *_):
-                skin_index = int(skin_index)
-                from . import skin_debug
-                self.text.setText(
-                    skin_debug.info(self.gltf, skin_index))
-            case json_path:
-                self.text.setText('/'.join(json_path))
-
 
 def run():
-    import sys
-    from logging import basicConfig, DEBUG
-    basicConfig(format='%(levelname)s:%(name)s:%(message)s', level=DEBUG)
-    app = QtWidgets.QApplication(sys.argv)
-    window = Window()
-    window.resize(1280, 1024)
+    logging.basicConfig(
+        format='%(levelname)s:%(name)s:%(message)s', level=logging.DEBUG)
+
+    window = GlfwWindow()
+
     if len(sys.argv) > 1:
         window.open(pathlib.Path(sys.argv[1]))
-    window.show()
-    sys.exit(app.exec_())
+
+    while window.new_frame():
+
+        window.render()
