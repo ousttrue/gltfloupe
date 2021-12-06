@@ -58,7 +58,7 @@ def docking_space(name: str):
 
 
 class GlfwWindow:
-    def __init__(self, window_name="minimal ImGui/GLFW3 example", width=1280, height=720) -> None:
+    def __init__(self, window_name="glTFloupe", width=1280, height=720) -> None:
         if not glfw.init():
             logger.error("Could not initialize OpenGL context")
             exit(1)
