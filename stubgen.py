@@ -134,5 +134,7 @@ def main(w: io.IOBase):
 
 
 if __name__ == '__main__':
-    with (HERE / 'typings/imgui/__init__.pyi').open('w', encoding='utf-8') as w:
+    dst = HERE / 'typings/imgui/__init__.pyi'
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open('w', encoding='utf-8') as w:
         main(w)
