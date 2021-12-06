@@ -13,6 +13,13 @@
                 "${env:GLTF_SAMPLE_MODELS}/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
             ],
             "justMyCode": false
-        }
+        },
+        {
+            "name": "stubgen",
+            "type": "python",
+            "request": "launch",
+            "program": "stubgen.py",
+            "justMyCode": false
+        },
     ]
 }

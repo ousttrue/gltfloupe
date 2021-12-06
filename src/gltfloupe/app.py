@@ -123,6 +123,28 @@ class GlfwWindow:
         self.impl.process_inputs()
         imgui.new_frame()
         self._update()
+
+        w, h = self.io.display_size
+
+        # update controller
+        self.controller.onResize(w, h)
+        x, y = self.io.mouse_pos
+        if self.io.mouse_down[0]:
+            self.controller.onLeftDown(x, y)
+        else:
+            self.controller.onLeftUp(x, y)
+        if self.io.mouse_down[1]:
+            self.controller.onRightDown(x, y)
+        else:
+            self.controller.onRightUp(x, y)
+        if self.io.mouse_down[2]:
+            self.controller.onMiddleDown(x, y)
+        else:
+            self.controller.onMiddleUp(x, y)
+        if self.io.mouse_wheel:
+            self.controller.onWheel(-self.io.mouse_wheel)
+        self.controller.onMotion(x, y)
+
         imgui.render()
 
         return True
