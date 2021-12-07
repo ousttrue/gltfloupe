@@ -13,18 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 class GUI:
-    def __init__(self, window: glfw._GLFWwindow) -> None:
+    def __init__(self) -> None:
         imgui.create_context()
         self.io = imgui.get_io()
-        self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
-        self.impl = imgui.integrations.glfw.GlfwRenderer(window)
-        self.show_json_tree = True
-
         # gl
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
         self.gltf: Optional[GltfData] = None
         self.selected = None
+        self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
+
+    def initialize(self, window: glfw._GLFWwindow):
+        self.impl = imgui.integrations.glfw.GlfwRenderer(window)
+        self.show_json_tree = True
 
     def __del__(self):
         del self.controller
@@ -165,8 +166,8 @@ class GUI:
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
 
-        import gltfio
         try:
+            import gltfio
             self.gltf = gltfio.parse_path(file)
             self.file = file
 

@@ -1,3 +1,4 @@
+from typing import Any, Optional
 import logging
 import glfw
 from OpenGL import GL
@@ -7,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class GlfwWindow:
-    def __init__(self, window_name="glTFloupe", width=1280, height=720) -> None:
+    def __init__(self, window_name: str, width=1280, height=720) -> None:
         if not glfw.init():
             logger.error("Could not initialize OpenGL context")
             exit(1)
@@ -28,10 +29,19 @@ class GlfwWindow:
 
         glfw.make_context_current(self.window)
 
-    def __del__(self):
-        glfw.terminate()
+        glfw.set_window_close_callback(self.window, self.on_close)
+
+        self.is_running = True
+
+    # def __del__(self):
+    #     glfw.terminate()
+
+    def on_close(self, window):
+        self.is_running = False
 
     def new_frame(self) -> bool:
+        if not self.is_running:
+            return False
         if glfw.window_should_close(self.window):
             return False
         glfw.poll_events()
