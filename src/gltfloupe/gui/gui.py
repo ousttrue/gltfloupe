@@ -9,7 +9,7 @@ import imgui
 import imgui.integrations.glfw
 from gltfio.parser import GltfData
 from OpenGL import GL
-
+from .. import gltf_loader
 
 logger = logging.getLogger(__name__)
 INI_FILE = str(pathlib.Path(
@@ -73,6 +73,7 @@ class GUI:
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
         self.data: Optional[GltfData] = None
+        self.loader: Optional[gltf_loader.GltfLoader] = None
 
     def initialize(self, window: glfw._GLFWwindow):
         self.impl = imgui.integrations.glfw.GlfwRenderer(window)
@@ -116,7 +117,7 @@ class GUI:
         for v in self.views:
             v.draw()
 
-        self.prop.set(self.data, self.tree.selected, self.controller.scene.drawables[0])
+        self.prop.set(self.data, self.tree.selected, self.loader)
 
     def _update_view(self):
         w, h = self.io.display_size
@@ -173,9 +174,9 @@ class GUI:
             self.tree.selected = ()
 
             # opengl
-            from ..gltf_loader import GltfLoader
-            loader = GltfLoader(self.data)
-            scene = loader.load()
+            self.loader = gltf_loader.GltfLoader(self.data)
+            scene = self.loader.load()
+            scene.calc_world()
             self.controller.scene.drawables = [scene]  # type: ignore
             from glglue.ctypesmath import AABB
             aabb = AABB.new_empty()

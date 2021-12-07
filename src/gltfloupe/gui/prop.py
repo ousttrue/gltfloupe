@@ -1,7 +1,8 @@
 from typing import Optional
 import json
 import imgui
-from ..gltf_loader import GltfData
+from gltfio.parser import GltfData
+from ..gltf_loader import GltfLoader
 
 
 def get_value(json, key):
@@ -23,18 +24,18 @@ class Prop:
         self.key = ()
         self.value = ''
 
-    def set(self, data: Optional[GltfData], key: tuple, scene):
+    def set(self, data: Optional[GltfData], key: tuple, loader: Optional[GltfLoader]):
         if self.data == data and self.key == key:
             return
         self.data = data
         self.key = key
 
-        if self.data:
+        if self.data and loader:
             match self.key:
                 case ('skins', skin_index):
                     from .. import skin_debug
                     self.value = skin_debug.get_debug_info(
-                        self.data, int(skin_index))
+                        self.data, int(skin_index), loader)
                 case _:
                     value = get_value(self.data.gltf, self.key)
                     self.value = json.dumps(value, indent=2)
