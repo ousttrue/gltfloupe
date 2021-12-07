@@ -28,8 +28,7 @@ class App:
 
 
 def run():
-    logging.basicConfig(
-        format='%(levelname)s:%(name)s:%(message)s', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
 
     app = App()
     app.run()

@@ -35,4 +35,6 @@ class ImGuiLogHandler(logging.Handler):
         # if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
         #     ImGui::SetScrollHereY(1.0f);
 
+        imgui.set_scroll_here_y(1.0)
+
         # ImGui::EndChild();

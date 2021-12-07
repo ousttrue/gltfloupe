@@ -1,4 +1,4 @@
-from typing import Optional, Union, Any, Callable, Dict
+from typing import Optional, Any, Callable, Dict
 import pathlib
 import logging
 import os
@@ -49,16 +49,24 @@ class GUI:
         # views
         from .jsontree import JsonTree
         self.tree = JsonTree()
+
         from .loghandler import ImGuiLogHandler
         self.log_handler = ImGuiLogHandler()
+        self.log_handler.setFormatter(logging.Formatter(
+            '%(levelname)s:%(name)s:%(message)s'))
         logging.getLogger().handlers = [self.log_handler]
 
         def show_metrics():
             return imgui.show_metrics_window(True)
+
+        from .prop import Prop
+        self.prop = Prop()
+
         self.views = [
             View('json', self.tree.draw),
             View('log', self.log_handler.draw),
             View('metrics', show_metrics, False),
+            View('prop', self.prop.draw),
         ]
 
         # gl
@@ -108,6 +116,11 @@ class GUI:
         for v in self.views:
             v.draw()
 
+        if self.gltf:
+            self.prop.set(self.gltf.gltf, self.tree.selected)
+        else:
+            self.prop.set({}, ())
+
     def _update_view(self):
         w, h = self.io.display_size
         self.controller.onResize(w, h)
@@ -152,11 +165,14 @@ class GUI:
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
+        self.gltf = None
+        self.tree.root = None
 
         try:
             import gltfio
             self.gltf = gltfio.parse_path(file)
             self.file = file
+            self.tree.root = self.gltf.gltf
 
             # opengl
             from ..gltf_loader import GltfLoader

@@ -1,13 +1,16 @@
-from typing import Union, Optional, Any
+import logging
+from typing import Union, Optional, Any, Tuple
 import imgui
+
+logger = logging.getLogger(__name__)
 
 
 class JsonTree:
     def __init__(self) -> None:
-        self.selected = None
+        self.selected: Tuple[str, ...] = ()
         self.root = None
 
-    def _traverse(self, key: str, node: Union[list, dict, Any]):
+    def _traverse(self, node: Union[list, dict, Any], *keys: str):
         flag = 0  # const.ImGuiTreeNodeFlags_.SpanFullWidth
         match node:
             case list():
@@ -22,28 +25,26 @@ class JsonTree:
         imgui.table_next_row()
         # col 0
         imgui.table_next_column()
-        open = imgui.tree_node(key, flag)
+        open = imgui.tree_node(keys[-1], flag)
         imgui.set_item_allow_overlap()
         # col 1
         imgui.table_next_column()
-        if node == self.selected:
-            pass
         _, selected = imgui.selectable(
-            value, node == self.selected, imgui.SELECTABLE_SPAN_ALL_COLUMNS)
+            value, keys == self.selected, imgui.SELECTABLE_SPAN_ALL_COLUMNS)
         if selected:
             # update selctable
-            selected = node
+            self.selected = keys
         if imgui.is_item_clicked():
             # update selctable
-            selected = node
+            self.selected = keys
         if open:
             match node:
                 case list():
                     for i, v in enumerate(node):
-                        self._traverse(f'{i}', v)
+                        self._traverse(v, *keys, f'{i}')
                 case dict():
                     for k, v in node.items():
-                        self._traverse(k, v)
+                        self._traverse(v, *keys, k)
             imgui.tree_pop()
 
     def draw(self):
@@ -63,8 +64,11 @@ class JsonTree:
             imgui.table_headers_row()
 
             # body
-            imgui.set_next_item_open(True, imgui.ONCE)
+            # imgui.set_next_item_open(True, imgui.ONCE)
+
+            old = self.selected
+
             for k, v in self.root.items():
-                self._traverse(k, v)
+                self._traverse(v, k)
 
             imgui.end_table()
