@@ -58,24 +58,26 @@ def get_transform(gltf_node: GltfNode) -> Union[ctypesmath.Mat4, ctypesmath.TRS]
 class GltfLoader:
     def __init__(self, gltf: GltfData) -> None:
         self.gltf = gltf
-        self.images: Dict[GltfImage, Image32] = {}
-        self.textures: Dict[GltfTexture, Texture] = {}
-        self.materials: Dict[GltfMaterial, Material] = {}
-        self.meshes: Dict[int, Mesh] = {}
+        # Corresponds to the index of GltfData
+        self.images: List[Image32] = []
+        self.textures: List[Texture] = []
+        self.materials: List[Material] = []
+        self.meshes: List[List[Mesh]] = []
+        self.nodes: List[Node] = []
 
     def _load_image(self, src: GltfImage):
         image = Image32.load(src.data)
-        self.images[src] = image
+        self.images.append(image)
 
     def _load_texture(self, src: GltfTexture):
-        texture = Texture(src.name, self.images[src.image])
-        self.textures[src] = texture
+        texture = Texture(src.name, self.images[src.image.index])
+        self.textures.append(texture)
 
     def _load_material(self, src: GltfMaterial):
         material = Material(src.name, VS, FS)
         if src.base_color_texture:
-            material.color_texture = self.textures[src.base_color_texture]
-        self.materials[src] = material
+            material.color_texture = self.textures[src.base_color_texture.index]
+        self.materials.append(material)
 
     def _load_mesh(self, name: str, src: GltfPrimitive):
         macro = ['#version 330']
@@ -94,21 +96,24 @@ class GltfLoader:
         mesh = Mesh(name, Planar(attributes), indices)
         mesh.aabb = ctypesmath.AABB(ctypesmath.Float3(
             *src.position_min), ctypesmath.Float3(*src.position_max))
-        mesh.add_submesh(self.materials[src.material], macro, GL.GL_TRIANGLES)
-        self.meshes[id(src)] = mesh
+        mesh.add_submesh(
+            self.materials[src.material.index], macro, GL.GL_TRIANGLES)
+        self.meshes[-1].append(mesh)
 
-    def _load(self, src: List[GltfNode], dst: Node):
+    def _load_node(self, src: GltfNode):
+        t = get_transform(src)
+        node = Node(src.name, t)
+        self.nodes.append(node)
+        if src.mesh:
+            for i, _ in enumerate(src.mesh.primitives):
+                mesh = self.meshes[src.mesh.index][i]
+                node.meshes.append(mesh)
+
+    def _build_node_hierarchy(self, src: List[GltfNode], dst: Node):
         for gltf_node in src:
-            t = get_transform(gltf_node)
-            node = Node(gltf_node.name, t)
+            node = self.nodes[gltf_node.index]
             dst.children.append(node)
-
-            if gltf_node.mesh:
-                for gltf_prim in gltf_node.mesh.primitives:
-                    mesh = self.meshes[id(gltf_prim)]
-                    node.meshes.append(mesh)
-
-            self._load(gltf_node.children, node)
+            self._build_node_hierarchy(gltf_node.children, node)
 
     def load(self) -> Node:
         for image in self.gltf.images:
@@ -118,9 +123,13 @@ class GltfLoader:
         for material in self.gltf.materials:
             self._load_material(material)
         for mesh in self.gltf.meshes:
+            self.meshes.append([])
             for i, prim in enumerate(mesh.primitives):
                 self._load_mesh(f'{mesh.name}:{i}', prim)
+        for node in self.gltf.nodes:
+            self._load_node(node)
 
+        # root
         scene = Node('__scene__', ctypesmath.Mat4.new_identity())
-        self._load(self.gltf.scene, scene)
+        self._build_node_hierarchy(self.gltf.scene, scene)
         return scene
