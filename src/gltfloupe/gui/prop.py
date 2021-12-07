@@ -1,5 +1,7 @@
-import imgui
+from typing import Optional
 import json
+import imgui
+from ..gltf_loader import GltfData
 
 
 def get_value(json, key):
@@ -17,21 +19,29 @@ def get_value(json, key):
 
 class Prop:
     def __init__(self) -> None:
-        self.root = {}
+        self.data: Optional[GltfData] = None
         self.key = ()
         self.value = ''
 
-    def set(self, root: dict, key: tuple):
-        if self.root == root and self.key == key:
+    def set(self, data: Optional[GltfData], key: tuple, scene):
+        if self.data == data and self.key == key:
             return
-        self.root = root
+        self.data = data
         self.key = key
-        value = get_value(self.root, self.key)
-        self.value = json.dumps(value, indent=2)
+
+        if self.data:
+            match self.key:
+                case ('skins', skin_index):
+                    from .. import skin_debug
+                    self.value = skin_debug.get_debug_info(
+                        self.data, int(skin_index))
+                case _:
+                    value = get_value(self.data.gltf, self.key)
+                    self.value = json.dumps(value, indent=2)
 
     def draw(self):
-        if not self.root:
-            imgui.text('not selected')
+        if not self.data:
+            imgui.text('not gltf')
             return
 
         imgui.text_unformatted(

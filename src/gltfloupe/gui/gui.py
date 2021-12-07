@@ -72,7 +72,7 @@ class GUI:
         # gl
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
-        self.gltf: Optional[GltfData] = None
+        self.data: Optional[GltfData] = None
 
     def initialize(self, window: glfw._GLFWwindow):
         self.impl = imgui.integrations.glfw.GlfwRenderer(window)
@@ -116,10 +116,7 @@ class GUI:
         for v in self.views:
             v.draw()
 
-        if self.gltf:
-            self.prop.set(self.gltf.gltf, self.tree.selected)
-        else:
-            self.prop.set({}, ())
+        self.prop.set(self.data, self.tree.selected, self.controller.scene.drawables[0])
 
     def _update_view(self):
         w, h = self.io.display_size
@@ -165,18 +162,19 @@ class GUI:
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
-        self.gltf = None
+        self.data = None
         self.tree.root = None
 
         try:
             import gltfio
-            self.gltf = gltfio.parse_path(file)
+            self.data = gltfio.parse_path(file)
             self.file = file
-            self.tree.root = self.gltf.gltf
+            self.tree.root = self.data.gltf
+            self.tree.selected = ()
 
             # opengl
             from ..gltf_loader import GltfLoader
-            loader = GltfLoader(self.gltf)
+            loader = GltfLoader(self.data)
             scene = loader.load()
             self.controller.scene.drawables = [scene]  # type: ignore
             from glglue.ctypesmath import AABB

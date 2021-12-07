@@ -17,7 +17,7 @@ def get_world_position(data: GltfData, node: GltfNode) -> Tuple[float, float, fl
     return 0, 0, 0
 
 
-def info(data: GltfData, skin_index: int):
+def get_debug_info(data: GltfData, skin_index: int):
     skin = data.gltf['skins'][skin_index]
     joints = skin['joints']
 
