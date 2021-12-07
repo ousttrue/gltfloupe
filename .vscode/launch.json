@@ -15,10 +15,33 @@
             "justMyCode": false
         },
         {
+            "name": "gltfloupe(profile)",
+            "type": "python",
+            "request": "launch",
+            "module": "cProfile",
+            "args": [
+                "-s",
+                "cumulative",
+                "-o",
+                "profile.dat",
+                "-m",
+                "gltfloupe",
+                "${env:GLTF_SAMPLE_MODELS}/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "stubgen",
             "type": "python",
             "request": "launch",
             "program": "stubgen.py",
+            "justMyCode": false
+        },
+        {
+            "name": "print_profile",
+            "type": "python",
+            "request": "launch",
+            "program": "print_profile.py",
             "justMyCode": false
         },
     ]
