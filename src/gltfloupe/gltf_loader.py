@@ -9,8 +9,7 @@ from glglue.scene.texture import Image32, Texture
 from glglue.scene.material import Material
 from glglue.scene.mesh import Mesh
 from glglue.scene.node import Node
-from glglue.scene.vertices import VectorView
-from glglue.scene.vertices import Planar
+from glglue.scene.vertices import VectorView, Planar
 
 
 def get_shader(name: str) -> str:
@@ -33,8 +32,8 @@ MAP = {
 }
 
 
-def get_vectorview(src) -> VectorView:
-    return VectorView(src.scalar_array, MAP[src.scalar_array.format], src.element_count)
+def get_vectorview(src: GltfAccessorSlice) -> VectorView:
+    return VectorView(src.scalar_view, MAP[src.scalar_view.format], src.element_count)
 
 
 def get_transform(gltf_node: GltfNode) -> Union[ctypesmath.Mat4, ctypesmath.TRS]:
