@@ -1,6 +1,7 @@
 from typing import Optional, Union, Any
 import pathlib
 import logging
+import os
 
 import glfw
 import imgui
@@ -10,12 +11,15 @@ from OpenGL import GL
 
 
 logger = logging.getLogger(__name__)
+INI_FILE = str(pathlib.Path(
+    os.environ['USERPROFILE']) / 'gltfloupe.ini').encode('utf-8')
 
 
 class GUI:
     def __init__(self) -> None:
         imgui.create_context()
         self.io = imgui.get_io()
+        self.io.ini_file_name = INI_FILE
         # io.Fonts->AddFontFromFileTTF("resource\\ipag.ttf", 14.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
         self.io.fonts.add_font_from_file_ttf(
             "C:/Windows/Fonts/MSGothic.ttc", 20
