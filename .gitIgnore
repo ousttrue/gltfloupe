@@ -3,4 +3,4 @@
 *.egg-info
 src/gltfloupe/_version.py
 /imgui.ini
-typings/imgui/__init__.pyi
+typings/imgui
