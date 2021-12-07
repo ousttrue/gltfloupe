@@ -1,7 +1,8 @@
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Callable, Dict
 import pathlib
 import logging
 import os
+from dataclasses import dataclass
 
 import glfw
 import imgui
@@ -15,6 +16,25 @@ INI_FILE = str(pathlib.Path(
     os.environ['USERPROFILE']) / 'gltfloupe.ini').encode('utf-8')
 
 
+@dataclass
+class View:
+    name: str
+    drawer: Callable[[], Any]
+    use_begin: bool = True
+    visible: bool = True
+
+    def draw(self):
+        if not self.visible:
+            return
+        if self.use_begin:
+            is_expand, self.visible = imgui.begin(self.name, True)
+            if is_expand:
+                self.drawer()
+            imgui.end()
+        else:
+            self.visible = self.drawer()
+
+
 class GUI:
     def __init__(self) -> None:
         imgui.create_context()
@@ -24,15 +44,27 @@ class GUI:
         self.io.fonts.add_font_from_file_ttf(
             "C:/Windows/Fonts/MSGothic.ttc", 20
         )
+        self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
+
+        # views
+        from .jsontree import JsonTree
+        self.tree = JsonTree()
+        from .loghandler import ImGuiLogHandler
+        self.log_handler = ImGuiLogHandler()
+        logging.getLogger().handlers = [self.log_handler]
+
+        def show_metrics():
+            return imgui.show_metrics_window(True)
+        self.views = [
+            View('json', self.tree.draw),
+            View('log', self.log_handler.draw),
+            View('metrics', show_metrics, False),
+        ]
+
         # gl
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
         self.gltf: Optional[GltfData] = None
-        self.selected = None
-        self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
-        from .loghandler import ImGuiLogHandler
-        self.log_handler = ImGuiLogHandler()
-        logging.getLogger().handlers = [self.log_handler]
 
     def initialize(self, window: glfw._GLFWwindow):
         self.impl = imgui.integrations.glfw.GlfwRenderer(window)
@@ -42,79 +74,13 @@ class GUI:
         del self.controller
         self.impl.shutdown()
 
-    def _jsontree(self):
-        if not self.show_json_tree:
-            return
-        is_expand, self.show_json_tree = imgui.begin("json", True)
-        flags = (
-            imgui.TABLE_BORDERS_VERTICAL
-            | imgui.TABLE_BORDERS_OUTER_HORIZONTAL
-            | imgui.TABLE_RESIZABLE
-            | imgui.TABLE_ROW_BACKGROUND
-            | imgui.TABLE_NO_BORDERS_IN_BODY
-        )
-        if is_expand:
-            if self.gltf:
-                if imgui.begin_table("jsontree_table", 2, flags):
-                    # header
-                    imgui.table_setup_column("key")
-                    imgui.table_setup_column("value")
-                    imgui.table_headers_row()
-
-                    # body
-                    def traverse(key: str, node: Union[list, dict, Any]):
-                        flag = 0  # const.ImGuiTreeNodeFlags_.SpanFullWidth
-                        match node:
-                            case list():
-                                value = f'({len(node)})'
-                            case dict():
-                                value = node.get('name', '')
-                            case _:
-                                flag |= imgui.TREE_NODE_LEAF
-                                flag |= imgui.TREE_NODE_BULLET
-                                # flag |= imgui.TREE_NODE_NO_TREE_PUSH_ON_OPEN
-                                value = f'{node}'
-                        imgui.table_next_row()
-                        # col 0
-                        imgui.table_next_column()
-                        open = imgui.tree_node(key, flag)
-                        imgui.set_item_allow_overlap()
-                        # col 1
-                        imgui.table_next_column()
-                        if node == self.selected:
-                            pass
-                        _, selected = imgui.selectable(
-                            value, node == self.selected, imgui.SELECTABLE_SPAN_ALL_COLUMNS)
-                        if selected:
-                            # update selctable
-                            self.selected = node
-                        if imgui.is_item_clicked():
-                            # update selctable
-                            self.selected = node
-                        if open:
-                            match node:
-                                case list():
-                                    for i, v in enumerate(node):
-                                        traverse(f'{i}', v)
-                                case dict():
-                                    for k, v in node.items():
-                                        traverse(k, v)
-                            imgui.tree_pop()
-
-                    imgui.set_next_item_open(True, imgui.ONCE)
-                    for k, v in self.gltf.gltf.items():
-                        traverse(k, v)
-
-                    imgui.end_table()
-        imgui.end()
-
-    def _logger(self):
-        self.log_handler.draw()
-
     def _update(self):
         from .dockspace import dockspace
         dockspace('docking_space')
 
+        #
+        # imgui menu
+        #
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File", True):
 
@@ -128,17 +94,19 @@ class GUI:
                 imgui.end_menu()
 
             if imgui.begin_menu("View", True):
-                _, self.show_json_tree = imgui.menu_item(
-                    "jsontree", '', self.show_json_tree, True
-                )
-
+                for v in self.views:
+                    clicked, v.visible = imgui.menu_item(
+                        v.name, '', v.visible, True
+                    )
                 imgui.end_menu()
 
             imgui.end_main_menu_bar()
 
-        self._logger()
-        self._jsontree()
-        imgui.show_metrics_window()
+        #
+        # imgui widgets
+        #
+        for v in self.views:
+            v.draw()
 
     def _update_view(self):
         w, h = self.io.display_size
