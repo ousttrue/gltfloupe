@@ -33,8 +33,9 @@ class GlfwWindow:
 
         self.is_running = True
 
-    # def __del__(self):
-    #     glfw.terminate()
+    def __del__(self):
+        # glfw.terminate()
+        pass
 
     def on_close(self, window):
         self.is_running = False

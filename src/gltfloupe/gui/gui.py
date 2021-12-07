@@ -124,14 +124,8 @@ class GUI:
 
         self._jsontree()
 
-    def _new_frame(self):
-        self.impl.process_inputs()
-        imgui.new_frame()
-        self._update()
-
+    def _update_view(self):
         w, h = self.io.display_size
-
-        # update controller
         self.controller.onResize(w, h)
         x, y = self.io.mouse_pos
         if self.io.mouse_down[0]:
@@ -149,6 +143,15 @@ class GUI:
         if self.io.mouse_wheel:
             self.controller.onWheel(-self.io.mouse_wheel)
         self.controller.onMotion(x, y)
+
+    def _new_frame(self):
+        self.impl.process_inputs()
+        imgui.new_frame()
+        self._update()
+
+        # update controller
+        if not self.io.want_capture_mouse:
+            self._update_view()
 
         imgui.render()
 

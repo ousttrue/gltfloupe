@@ -6,19 +6,30 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class App:
+    def __init__(self) -> None:
+        from .gui.glfw_window import GlfwWindow
+        self.window = GlfwWindow('glTF loupe')
+
+        from .gui.gui import GUI
+        self.gui = GUI()
+        self.gui.initialize(self.window.window)
+        if len(sys.argv) > 1:
+            self.gui.open(pathlib.Path(sys.argv[1]))
+
+    def __del__(self):
+        del self.gui
+        del self.window
+
+    def run(self):
+        while self.window.new_frame():
+            self.gui.render()
+            self.window.end_frame()
+
+
 def run():
     logging.basicConfig(
         format='%(levelname)s:%(name)s:%(message)s', level=logging.DEBUG)
 
-    from .gui.glfw_window import GlfwWindow
-    window = GlfwWindow('glTF loupe')
-
-    from .gui.gui import GUI
-    gui = GUI()
-    gui.initialize(window.window)
-    if len(sys.argv) > 1:
-        gui.open(pathlib.Path(sys.argv[1]))
-
-    while window.new_frame():
-        gui.render()
-        window.end_frame()
+    app = App()
+    app.run()
