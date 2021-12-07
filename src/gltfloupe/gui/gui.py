@@ -16,12 +16,19 @@ class GUI:
     def __init__(self) -> None:
         imgui.create_context()
         self.io = imgui.get_io()
+        # io.Fonts->AddFontFromFileTTF("resource\\ipag.ttf", 14.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+        self.io.fonts.add_font_from_file_ttf(
+            "C:/Windows/Fonts/MSGothic.ttc", 20
+        )
         # gl
         import glglue.gl3.samplecontroller
         self.controller = glglue.gl3.samplecontroller.SampleController()
         self.gltf: Optional[GltfData] = None
         self.selected = None
         self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
+        from .loghandler import ImGuiLogHandler
+        self.log_handler = ImGuiLogHandler()
+        logging.getLogger().handlers = [self.log_handler]
 
     def initialize(self, window: glfw._GLFWwindow):
         self.impl = imgui.integrations.glfw.GlfwRenderer(window)
@@ -34,7 +41,7 @@ class GUI:
     def _jsontree(self):
         if not self.show_json_tree:
             return
-        is_expand, self.show_json_tree = imgui.begin("jsontree", True)
+        is_expand, self.show_json_tree = imgui.begin("json", True)
         flags = (
             imgui.TABLE_BORDERS_VERTICAL
             | imgui.TABLE_BORDERS_OUTER_HORIZONTAL
@@ -97,6 +104,9 @@ class GUI:
                     imgui.end_table()
         imgui.end()
 
+    def _logger(self):
+        self.log_handler.draw()
+
     def _update(self):
         from .dockspace import dockspace
         dockspace('docking_space')
@@ -122,7 +132,9 @@ class GUI:
 
             imgui.end_main_menu_bar()
 
+        self._logger()
         self._jsontree()
+        imgui.show_metrics_window()
 
     def _update_view(self):
         w, h = self.io.display_size
