@@ -1,16 +1,15 @@
 import logging
 from typing import Union, Optional, Any, Tuple
 import imgui
-
 logger = logging.getLogger(__name__)
 
 
 class JsonTree:
     def __init__(self) -> None:
-        self.selected: Tuple[str, ...] = ()
+        self.selected: Tuple[Union[str, int], ...] = ()
         self.root = None
 
-    def _traverse(self, node: Union[list, dict, Any], *keys: str):
+    def _traverse(self, node: Union[list, dict, Any], *keys: Union[str, int]):
         flag = 0  # const.ImGuiTreeNodeFlags_.SpanFullWidth
         match node:
             case list():
@@ -25,7 +24,7 @@ class JsonTree:
         imgui.table_next_row()
         # col 0
         imgui.table_next_column()
-        open = imgui.tree_node(keys[-1], flag)
+        open = imgui.tree_node(str(keys[-1]), flag)
         imgui.set_item_allow_overlap()
         # col 1
         imgui.table_next_column()
@@ -41,7 +40,7 @@ class JsonTree:
             match node:
                 case list():
                     for i, v in enumerate(node):
-                        self._traverse(v, *keys, f'{i}')
+                        self._traverse(v, *keys, i)
                 case dict():
                     for k, v in node.items():
                         self._traverse(v, *keys, k)
