@@ -55,14 +55,18 @@ class AccessorTable:
             return
 
         if data and loader:
+            accessor_index = None
             match key:
                 case ('meshes', mesh_index, 'primitives', prim_index, 'indices'):
-                    pass
+                    accessor_index = get_value(data.gltf, key)
 
                 case ('meshes', mesh_index, 'primitives', prim_index, 'attributes', attribute):
-                    pass
+                    accessor_index = get_value(data.gltf, key)
 
                 case ('skins', skin_index, 'inverseBindMatrices'):
+                    accessor_index = get_value(data.gltf, key)
+
+                case ('accessors', accessor_index):
                     pass
 
                 case _:
@@ -70,5 +74,4 @@ class AccessorTable:
 
             self.data = data
             self.key = key
-            value = get_value(data.gltf, key)
-            self.view = data.buffer_reader.read_accessor(value)
+            self.view = data.buffer_reader.read_accessor(accessor_index)

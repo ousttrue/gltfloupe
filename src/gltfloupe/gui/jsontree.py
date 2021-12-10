@@ -5,6 +5,30 @@ import fontawesome47.icons_str as ICONS_FA
 logger = logging.getLogger(__name__)
 
 
+def can_jump(keys: tuple, value):
+    match keys:
+        case ('nodes', node_index, 'children', child_index):
+            return ('nodes', value)
+        case ('scenes', scene_index, 'nodes', node_index):
+            return ('nodes', value)
+        case ('skins', skin_index, 'skeleton'):
+            return ('nodes', value)
+        case ('skins', skin_index, 'joints', joint_index):
+            return ('nodes', value)
+
+    return False
+
+
+def is_scene(keys: tuple):
+    match keys:
+        case ('scene',):
+            return True
+        case ('scenes',):
+            return True
+        case ('scenes', scene_index):
+            return True
+
+
 def is_node(keys: tuple):
     '''
     array of node, the node, node index
@@ -17,6 +41,8 @@ def is_node(keys: tuple):
         case ('nodes', node_index, 'children'):
             return True
         case ('nodes', node_index, 'children', child_index):
+            return True
+        case ('scenes', scene_index, 'nodes'):
             return True
         case ('scenes', scene_index, 'nodes', node_index):
             return True
@@ -105,14 +131,17 @@ def is_buffer(keys: tuple):
 
 
 def get_icon(keys: tuple) -> str:
+    if is_scene(keys):
+        return ICONS_FA.FOLDER
+
     if is_node(keys):
-        return ICONS_FA.ARROWS
+        return ICONS_FA.SITEMAP
 
     if is_mesh(keys):
         return ICONS_FA.CUBE
 
     if is_skin(keys):
-        return ICONS_FA.MALE
+        return ICONS_FA.CHILD
 
     if is_material(keys):
         return ICONS_FA.DIAMOND
@@ -122,6 +151,9 @@ def get_icon(keys: tuple) -> str:
 
     if is_animation(keys):
         return ICONS_FA.PLAY
+
+    if can_jump(keys, None):
+        return ICONS_FA.SHARE
 
     return ''
 
@@ -158,7 +190,8 @@ class JsonTree:
 
         self._history.append(keys)
         self._history_pos += 1
-        logger.debug(f'{self._history_pos}/{len(self._history)}')
+        logger.debug(
+            f'{self._history_pos}/{len(self._history)}: {self._history[-1]}')
 
     def back(self):
         if self._history_pos > 0:
@@ -182,8 +215,10 @@ class JsonTree:
                 flag |= imgui.TREE_NODE_BULLET
                 # flag |= imgui.TREE_NODE_NO_TREE_PUSH_ON_OPEN
                 value = f'{node}'
-        if tuple_status_with(keys, self.get_selected()):
-            imgui.set_next_item_open(True, imgui.ONCE)
+        selected = self.get_selected()
+        if tuple_status_with(keys, selected):
+            if len(keys) < len(selected):
+                imgui.set_next_item_open(True, imgui.ONCE)
         imgui.table_next_row()
         # col 0
         imgui.table_next_column()
@@ -193,12 +228,21 @@ class JsonTree:
         imgui.table_next_column()
         _, selected = imgui.selectable(
             value, keys == self.get_selected(), imgui.SELECTABLE_SPAN_ALL_COLUMNS)
-        if selected:
+        if imgui.is_mouse_double_clicked() and imgui.is_item_clicked():
             # update selectable
-            self.push(keys)
-        if imgui.is_item_clicked():
+            dst = can_jump(keys, node)
+            if dst:
+                logger.debug('double clicked')
+                self.push(dst)
+        elif imgui.is_item_clicked():
             # update selectable
+            logger.debug('clicked')
             self.push(keys)
+        # elif selected:
+        #     # update selectable
+        #     logger.debug('selected')
+        #     self.push(keys)
+
         if open:
             match node:
                 case list():
