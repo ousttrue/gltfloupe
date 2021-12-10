@@ -1,7 +1,129 @@
 import logging
 from typing import Union, Optional, Any, Tuple
 import imgui
+import fontawesome47.icons_str as ICONS_FA
 logger = logging.getLogger(__name__)
+
+
+def is_node(keys: tuple):
+    '''
+    array of node, the node, node index
+    '''
+    match keys:
+        case  ('nodes',):
+            return True
+        case ('nodes', node_index):
+            return True
+        case ('nodes', node_index, 'children'):
+            return True
+        case ('nodes', node_index, 'children', child_index):
+            return True
+        case ('scenes', scene_index, 'nodes', node_index):
+            return True
+        case ('skins', skin_index, 'skeleton'):
+            return True
+        case ('skins', skin_index, 'joints'):
+            return True
+        case ('skins', skin_index, 'joints', joint_index):
+            return True
+
+
+def is_mesh(keys: tuple):
+    match keys:
+        case ('meshes',):
+            return True
+        case ('meshes', mesh_index):
+            return True
+        case ('nodes', node_index, 'mesh'):
+            return True
+
+
+def is_skin(keys: tuple):
+    match keys:
+        case ('skins',):
+            return True
+        case ('skins', skin_index):
+            return True
+        case ('nodes', node_index, 'skin'):
+            return True
+
+
+def is_material(keys: tuple):
+    match keys:
+        case ('materials', ):
+            return True
+        case ('materials', material_index):
+            return True
+        case ('textures',):
+            return True
+        case ('textures', texture_index):
+            return True
+        case ('images',):
+            return True
+        case ('images', image_index):
+            return True
+        case ('samplers', ):
+            return True
+        case ('samplers', sampler_index):
+            return True
+        case ('meshes', meshes_index, 'primitives', prim_index, 'material'):
+            return True
+
+
+def is_animation(keys: tuple):
+    match keys:
+        case ('animations',):
+            return True
+        case ('animations', animation_index):
+            return True
+
+
+def is_buffer(keys: tuple):
+    match keys:
+        case ('buffers', ):
+            return True
+        case ('buffers', buffer_index):
+            return True
+        case ('bufferViews', ):
+            return True
+        case ('bufferViews', bufferView_index):
+            return True
+        case ('bufferViews', bufferView_index, 'buffer'):
+            return True
+        case ('accessors', ):
+            return True
+        case ('accessors', accessor_index):
+            return True
+        case ('accessors', accessor_index, 'bufferView'):
+            return True
+        case ('meshes', meshes_index, 'primitives', prim_index, 'indices'):
+            return True
+        case ('meshes', meshes_index, 'primitives', prim_index, 'attributes', attribute):
+            return True
+        case ('skins', skin_index, 'inverseBindMatrices'):
+            return True
+
+
+def get_icon(keys: tuple) -> str:
+    if is_node(keys):
+        return ICONS_FA.ARROWS
+
+    if is_mesh(keys):
+        return ICONS_FA.CUBE
+
+    if is_skin(keys):
+        return ICONS_FA.MALE
+
+    if is_material(keys):
+        return ICONS_FA.DIAMOND
+
+    if is_buffer(keys):
+        return ICONS_FA.DATABASE
+
+    if is_animation(keys):
+        return ICONS_FA.PLAY
+
+    return ''
 
 
 class JsonTree:
@@ -24,7 +146,7 @@ class JsonTree:
         imgui.table_next_row()
         # col 0
         imgui.table_next_column()
-        open = imgui.tree_node(str(keys[-1]), flag)
+        open = imgui.tree_node(f'{get_icon(keys)} {keys[-1]}', flag)
         imgui.set_item_allow_overlap()
         # col 1
         imgui.table_next_column()

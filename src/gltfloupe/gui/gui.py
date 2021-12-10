@@ -35,15 +35,45 @@ class View:
             self.visible = self.drawer()
 
 
+def load_font(size):
+    '''
+    https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#font-loading-instructions
+    '''
+    io = imgui.get_io()
+    # Load a first font
+    fonts: imgui._FontAtlas = io.fonts
+    # fonts.add_font_default()
+    fonts.add_font_from_file_ttf(
+        "C:/Windows/Fonts/MSGothic.ttc", size, None, fonts.get_glyph_ranges_japanese()
+    )
+
+    # Add character ranges and merge into the previous font
+    # The ranges array is not copied by the AddFont* functions and is used lazily
+    # so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
+    # Will not be copied by AddFont* so keep in scope.
+    config = imgui.core._FontConfig()
+    config.merge_mode = True
+    config.glyph_min_advance_x = size
+    # fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge into first font
+
+    import ctypes
+    icons_ranges = (ctypes.c_ushort * 3)(0xf000, 0xf3ff, 0)
+    address = ctypes.addressof(icons_ranges)
+    import fontawesome47
+    fonts.add_font_from_file_ttf(
+        str(fontawesome47.get_path()), size,
+        config,
+        imgui.core._StaticGlyphRanges.from_address(address))
+    # Merge into first font
+    fonts.build()
+
+
 class GUI:
     def __init__(self) -> None:
         imgui.create_context()
         self.io = imgui.get_io()
         self.io.ini_file_name = INI_FILE
-        # io.Fonts->AddFontFromFileTTF("resource\\ipag.ttf", 14.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-        self.io.fonts.add_font_from_file_ttf(
-            "C:/Windows/Fonts/MSGothic.ttc", 20
-        )
+        load_font(20)
         self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
 
         # views
