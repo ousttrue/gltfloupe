@@ -94,11 +94,15 @@ class GUI:
         from .prop import Prop
         self.prop = Prop()
 
+        from .accessor_table import AccessorTable
+        self.accessor = AccessorTable()
+
         self.views = [
             View('json', self.tree.draw),
             View('log', self.log_handler.draw),
             View('metrics', show_metrics, False),
             View('prop', self.prop.draw),
+            View('accessor', self.accessor.draw),
         ]
 
         # gl
@@ -160,6 +164,7 @@ class GUI:
                 self.tree.push(selected)
 
         self.prop.set(self.data, self.tree.get_selected(), self.loader)
+        self.accessor.set(self.data, self.tree.get_selected(), self.loader)
 
     def _update_view(self):
         w, h = self.io.display_size
