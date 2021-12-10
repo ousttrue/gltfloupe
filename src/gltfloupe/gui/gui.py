@@ -1,7 +1,6 @@
-from typing import Optional, Any, Callable, Dict
+from typing import Optional, Any, Callable
 import pathlib
 import logging
-import os
 from dataclasses import dataclass
 
 import glfw
@@ -12,8 +11,6 @@ from OpenGL import GL
 from .. import gltf_loader
 
 logger = logging.getLogger(__name__)
-INI_FILE = str(pathlib.Path(
-    os.environ['USERPROFILE']) / 'gltfloupe.ini').encode('utf-8')
 
 
 @dataclass
@@ -26,6 +23,8 @@ class View:
     def draw(self):
         if not self.visible:
             return
+
+        imgui.set_next_window_size(550, 680, condition=imgui.FIRST_USE_EVER)
         if self.use_begin:
             is_expand, self.visible = imgui.begin(self.name, True)
             selected = None
@@ -71,10 +70,11 @@ def load_font(size):
 
 
 class GUI:
-    def __init__(self) -> None:
+    def __init__(self, ini: str) -> None:
         imgui.create_context()
+        imgui.load_ini_settings_from_memory(ini)
         self.io = imgui.get_io()
-        self.io.ini_file_name = INI_FILE
+        self.io.ini_file_name = b''
         load_font(20)
         self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
 
@@ -115,8 +115,12 @@ class GUI:
         self.impl = imgui.integrations.glfw.GlfwRenderer(window)
         self.show_json_tree = True
 
+    def save_ini(self) -> str:
+        return imgui.save_ini_settings_to_memory()
+
     def __del__(self):
         del self.controller
+        # save ini
         self.impl.shutdown()
 
     def _update(self):

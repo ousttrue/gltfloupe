@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, NamedTuple
 import logging
 import glfw
 from OpenGL import GL
@@ -7,8 +7,16 @@ from OpenGL import GL
 logger = logging.getLogger(__name__)
 
 
+class WindowStatus(NamedTuple):
+    x: int
+    y: int
+    width: int
+    height: int
+    is_maxmized: bool
+
+
 class GlfwWindow:
-    def __init__(self, window_name: str, width=1280, height=720) -> None:
+    def __init__(self, window_name: str, window_status: Optional[WindowStatus] = None) -> None:
         if not glfw.init():
             logger.error("Could not initialize OpenGL context")
             exit(1)
@@ -20,12 +28,17 @@ class GlfwWindow:
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL.GL_TRUE)
 
         # Create a windowed mode window and its OpenGL context
-        self.window = glfw.create_window(
-            int(width), int(height), window_name, None, None
+        width = window_status.width if window_status else 1280
+        height = window_status.height if window_status else 720
+        self.window: Optional[glfw._GLFWwindow] = glfw.create_window(
+            width, height, window_name, None, None
         )
         if not self.window:
             logger.error("Could not initialize Window")
             exit(1)
+
+        if window_status and window_status.is_maxmized:
+            glfw.maximize_window(self.window)
 
         glfw.make_context_current(self.window)
 
@@ -50,3 +63,10 @@ class GlfwWindow:
 
     def end_frame(self):
         glfw.swap_buffers(self.window)
+
+    def get_status(self) -> WindowStatus:
+        w, h = glfw.get_window_size(self.window)
+        x, y = glfw.get_window_pos(self.window)
+        is_maximized = True if glfw.get_window_attrib(
+            self.window, glfw.MAXIMIZED) else False
+        return WindowStatus(x, y, w, h, is_maximized)

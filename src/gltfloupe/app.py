@@ -1,25 +1,31 @@
 import sys
 import pathlib
 import logging
-
+from . import config
 
 logger = logging.getLogger(__name__)
 
 
 class App:
     def __init__(self) -> None:
+
+        ini, window_status = config.load()
+
         from .gui.glfw_window import GlfwWindow
-        self.window = GlfwWindow('glTF loupe')
+        self.window = GlfwWindow('glTF loupe', window_status)
 
         from .gui.gui import GUI
-        self.gui = GUI()
-        self.gui.initialize(self.window.window)
+        self.gui = GUI(ini)
+        self.gui.initialize(self.window.window)  # type: ignore
         if len(sys.argv) > 1:
             self.gui.open(pathlib.Path(sys.argv[1]))
 
     def __del__(self):
+        ini = self.gui.save_ini()
         del self.gui
+        status = self.window.get_status()
         del self.window
+        config.save(ini, status)
 
     def run(self):
         while self.window.new_frame():
