@@ -60,6 +60,10 @@ def is_mesh(keys: tuple):
             return True
         case ('meshes', mesh_index):
             return True
+        case ('meshes', mesh_index, 'primitives'):
+            return True
+        case ('meshes', mesh_index, 'primitives', prim_index):
+            return True
         case ('nodes', node_index, 'mesh'):
             return True
 

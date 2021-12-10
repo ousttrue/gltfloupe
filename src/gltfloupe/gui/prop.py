@@ -7,6 +7,7 @@ import imgui
 from gltfio.parser import GltfData
 from ..gltf_loader import GltfLoader
 from ..jsonutil import get_value, to_pretty
+from .accessor_table import AccessorTable, get_accessor
 
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ class JumpContent(NamedTuple):
 @dataclasses.dataclass
 class Item:
     name: str
-    content: Union[TextContent, JumpContent]
+    content: Union[TextContent, JumpContent, AccessorTable]
     visible = True
 
     def draw(self):
@@ -115,6 +116,13 @@ class Prop:
                     from .. import skin_debug
                     self.contents.append(Item('skin_debug', TextContent(skin_debug.get_debug_info(
                         self.data, skin_index, loader))))
+
+            match get_accessor(self.data, key):
+                case int() as accessor_index:
+                    accessor = self.data.buffer_reader.read_accessor(
+                        accessor_index)
+                    self.contents.append(
+                        Item('accessor', AccessorTable(key, accessor)))
 
     def draw(self) -> Optional[tuple]:
         '''

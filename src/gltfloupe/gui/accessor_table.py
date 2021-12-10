@@ -1,21 +1,31 @@
 from typing import Optional
 from gltfio import GltfData
-from ..gltf_loader import GltfLoader
+from gltfio.types import GltfAccessorSlice
 import imgui
 from ..jsonutil import get_value
 
 
+def get_accessor(data: GltfData, keys: tuple) -> Optional[int]:
+    match keys:
+        case ('meshes', mesh_index, 'primitives', prim_index, 'indices'):
+            return get_value(data.gltf, keys)
+
+        case ('meshes', mesh_index, 'primitives', prim_index, 'attributes', attribute):
+            return get_value(data.gltf, keys)
+
+        case ('skins', skin_index, 'inverseBindMatrices'):
+            return get_value(data.gltf, keys)
+
+        case ('accessors', accessor_index):
+            return accessor_index
+
+
 class AccessorTable:
-    def __init__(self) -> None:
-        self.data = None
-        self.key = None
-        self.view = None
+    def __init__(self, keys: tuple, view: GltfAccessorSlice) -> None:
+        self.key = keys
+        self.view = view
 
     def draw(self):
-        imgui.text_unformatted(str(self.key))
-        if not self.view:
-            return
-
         flags = (
             imgui.TABLE_BORDERS_VERTICAL
             | imgui.TABLE_BORDERS_OUTER_HORIZONTAL
@@ -49,29 +59,3 @@ class AccessorTable:
                 i += 1
 
             imgui.end_table()
-
-    def set(self, data: Optional[GltfData], key: tuple, loader: Optional[GltfLoader]):
-        if self.data == data and self.key == key:
-            return
-
-        if data and loader:
-            accessor_index = None
-            match key:
-                case ('meshes', mesh_index, 'primitives', prim_index, 'indices'):
-                    accessor_index = get_value(data.gltf, key)
-
-                case ('meshes', mesh_index, 'primitives', prim_index, 'attributes', attribute):
-                    accessor_index = get_value(data.gltf, key)
-
-                case ('skins', skin_index, 'inverseBindMatrices'):
-                    accessor_index = get_value(data.gltf, key)
-
-                case ('accessors', accessor_index):
-                    pass
-
-                case _:
-                    return
-
-            self.data = data
-            self.key = key
-            self.view = data.buffer_reader.read_accessor(accessor_index)
