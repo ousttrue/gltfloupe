@@ -28,11 +28,46 @@ class View:
             return
         if self.use_begin:
             is_expand, self.visible = imgui.begin(self.name, True)
+            selected = None
             if is_expand:
-                self.drawer()
+                selected = self.drawer()
             imgui.end()
+            return selected
         else:
             self.visible = self.drawer()
+
+
+def load_font(size):
+    '''
+    https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#font-loading-instructions
+    '''
+    io = imgui.get_io()
+    # Load a first font
+    fonts: imgui._FontAtlas = io.fonts
+    # fonts.add_font_default()
+    fonts.add_font_from_file_ttf(
+        "C:/Windows/Fonts/MSGothic.ttc", size, None, fonts.get_glyph_ranges_japanese()
+    )
+
+    # Add character ranges and merge into the previous font
+    # The ranges array is not copied by the AddFont* functions and is used lazily
+    # so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
+    # Will not be copied by AddFont* so keep in scope.
+    config = imgui.core._FontConfig()
+    config.merge_mode = True
+    config.glyph_min_advance_x = size
+    # fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge into first font
+
+    import ctypes
+    icons_ranges = (ctypes.c_ushort * 3)(0xf000, 0xf3ff, 0)
+    address = ctypes.addressof(icons_ranges)
+    import fontawesome47
+    fonts.add_font_from_file_ttf(
+        str(fontawesome47.get_path()), size,
+        config,
+        imgui.core._StaticGlyphRanges.from_address(address))
+    # Merge into first font
+    fonts.build()
 
 
 class GUI:
@@ -40,10 +75,7 @@ class GUI:
         imgui.create_context()
         self.io = imgui.get_io()
         self.io.ini_file_name = INI_FILE
-        # io.Fonts->AddFontFromFileTTF("resource\\ipag.ttf", 14.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-        self.io.fonts.add_font_from_file_ttf(
-            "C:/Windows/Fonts/MSGothic.ttc", 20
-        )
+        load_font(20)
         self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
 
         # views
@@ -62,11 +94,15 @@ class GUI:
         from .prop import Prop
         self.prop = Prop()
 
+        from .accessor_table import AccessorTable
+        self.accessor = AccessorTable()
+
         self.views = [
             View('json', self.tree.draw),
             View('log', self.log_handler.draw),
             View('metrics', show_metrics, False),
             View('prop', self.prop.draw),
+            View('accessor', self.accessor.draw),
         ]
 
         # gl
@@ -85,7 +121,15 @@ class GUI:
 
     def _update(self):
         from .dockspace import dockspace
-        dockspace('docking_space')
+        with dockspace('docking_space'):
+            import fontawesome47.icons_str as ICONS_FA
+
+            if imgui.button(ICONS_FA.ARROW_LEFT):
+                self.tree.back()
+
+            imgui.same_line()
+            if imgui.button(ICONS_FA.ARROW_RIGHT):
+                self.tree.forward()
 
         #
         # imgui menu
@@ -115,9 +159,12 @@ class GUI:
         # imgui widgets
         #
         for v in self.views:
-            v.draw()
+            selected = v.draw()
+            if selected:
+                self.tree.push(selected)
 
-        self.prop.set(self.data, self.tree.selected, self.loader)
+        self.prop.set(self.data, self.tree.get_selected(), self.loader)
+        self.accessor.set(self.data, self.tree.get_selected(), self.loader)
 
     def _update_view(self):
         w, h = self.io.display_size
@@ -171,7 +218,7 @@ class GUI:
             self.data = gltfio.parse_path(file)
             self.file = file
             self.tree.root = self.data.gltf
-            self.tree.selected = ()
+            self.tree.push(())
 
             # opengl
             self.loader = gltf_loader.GltfLoader(self.data)
