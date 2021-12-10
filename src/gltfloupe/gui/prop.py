@@ -1,10 +1,16 @@
-from typing import Optional
+import logging
+from typing import Optional, List, NamedTuple, Union
+import dataclasses
 import json
 import io
 import imgui
 from gltfio.parser import GltfData
 from ..gltf_loader import GltfLoader
 from ..jsonutil import get_value, to_pretty
+
+
+logger = logging.getLogger(__name__)
+
 
 def node_debug(data: GltfData, node_index, loader: GltfLoader) -> str:
     node = data.nodes[node_index]
@@ -38,35 +44,92 @@ def node_debug(data: GltfData, node_index, loader: GltfLoader) -> str:
         return json.dumps(node, indent=2)
 
 
+class TextContent(NamedTuple):
+    content: str
+
+    def draw(self):
+        imgui.text_unformatted(self.content)
+
+
+class JumpContent(NamedTuple):
+    keys: tuple
+
+    def draw(self):
+        if imgui.button(str(self.keys)):
+            return self.keys
+
+
+@dataclasses.dataclass
+class Item:
+    name: str
+    content: Union[TextContent, JumpContent]
+    visible = True
+
+    def draw(self):
+        imgui.set_next_item_open(True, imgui.ONCE)
+        expanded, self.visible = imgui.collapsing_header(
+            self.name, self.visible)
+        if expanded:
+            return self.content.draw()
+
+
 class Prop:
     def __init__(self) -> None:
         self.data: Optional[GltfData] = None
         self.key = ()
-        self.value = ''
+        self.contents: List[Item] = []
 
     def set(self, data: Optional[GltfData], key: tuple, loader: Optional[GltfLoader]):
         if self.data == data and self.key == key:
             return
+
         self.data = data
         self.key = key
+        self.contents.clear()
 
         if self.data and loader:
             value = get_value(self.data.gltf, self.key)
-            self.value = to_pretty(value) + '\n'
-            match self.key:
-                case ('nodes', node_index, 'skin'):
-                    self.value += node_debug(self.data, node_index, loader)
-                case ('skins', skin_index):
-                    from .. import skin_debug
-                    self.value += skin_debug.get_debug_info(
-                        self.data, skin_index, loader)
+            self.contents.append(Item('json', TextContent(to_pretty(value))))
 
-    def draw(self):
+            match self.key:
+                case ('nodes', node_index):
+                    node = self.data.nodes[node_index]
+                    if node.mesh:
+                        self.contents.append(
+                            Item('ref to', JumpContent(('meshes', node.mesh.index))))
+                    if node.skin:
+                        self.contents.append(
+                            Item('ref to', JumpContent(('skins', node.skin.index))))
+
+                case ('nodes', node_index, 'skin'):
+                    self.contents.append(Item('node_debug', TextContent(node_debug(
+                        self.data, node_index, loader))))
+
+                case ('skins', skin_index):
+                    # ref from
+                    for node in self.data.nodes:
+                        if node.skin and node.skin.index == skin_index:
+                            self.contents.append(
+                                Item('ref from', JumpContent(('nodes', node.index))))
+
+                    from .. import skin_debug
+                    self.contents.append(Item('skin_debug', TextContent(skin_debug.get_debug_info(
+                        self.data, skin_index, loader))))
+
+    def draw(self) -> Optional[tuple]:
+        '''
+        return selected keys
+        '''
         if not self.data:
             imgui.text('not gltf')
             return
 
-        imgui.text_unformatted(
-            f'{self.key}')
+        imgui.text_unformatted(str(self.key))
 
-        imgui.text_unformatted(self.value)
+        selected = None
+        for item in self.contents:
+            current = item.draw()
+            if current:
+                selected = current
+
+        return selected

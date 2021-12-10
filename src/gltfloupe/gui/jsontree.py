@@ -1,5 +1,5 @@
 import logging
-from typing import Union, Optional, Any, Tuple
+from typing import Union, Optional, Any, Tuple, List
 import imgui
 import fontawesome47.icons_str as ICONS_FA
 logger = logging.getLogger(__name__)
@@ -126,10 +126,49 @@ def get_icon(keys: tuple) -> str:
     return ''
 
 
+def tuple_status_with(current, target) -> bool:
+    if len(current) > len(target):
+        return False
+
+    for l, r in zip(current, target):
+        if l != r:
+            return False
+    return True
+
+
 class JsonTree:
     def __init__(self) -> None:
-        self.selected: Tuple[Union[str, int], ...] = ()
         self.root = None
+        self._history: List[tuple] = []
+        self._history_pos = -1
+
+    def get_selected(self) -> tuple:
+        if len(self._history) == 0:
+            return ()
+        return self._history[self._history_pos]
+
+    def push(self, keys: tuple):
+        if self.get_selected() == keys:
+            return
+
+        if self._history:
+            # empty
+            while(self._history_pos+1 < len(self._history)):
+                self._history.pop()
+
+        self._history.append(keys)
+        self._history_pos += 1
+        logger.debug(f'{self._history_pos}/{len(self._history)}')
+
+    def back(self):
+        if self._history_pos > 0:
+            self._history_pos -= 1
+            logger.debug(f'{self._history_pos}/{len(self._history)}')
+
+    def forward(self):
+        if (self._history_pos+1) < len(self._history):
+            self._history_pos += 1
+            logger.debug(f'{self._history_pos}/{len(self._history)}')
 
     def _traverse(self, node: Union[list, dict, Any], *keys: Union[str, int]):
         flag = 0  # const.ImGuiTreeNodeFlags_.SpanFullWidth
@@ -143,6 +182,8 @@ class JsonTree:
                 flag |= imgui.TREE_NODE_BULLET
                 # flag |= imgui.TREE_NODE_NO_TREE_PUSH_ON_OPEN
                 value = f'{node}'
+        if tuple_status_with(keys, self.get_selected()):
+            imgui.set_next_item_open(True, imgui.ONCE)
         imgui.table_next_row()
         # col 0
         imgui.table_next_column()
@@ -151,13 +192,13 @@ class JsonTree:
         # col 1
         imgui.table_next_column()
         _, selected = imgui.selectable(
-            value, keys == self.selected, imgui.SELECTABLE_SPAN_ALL_COLUMNS)
+            value, keys == self.get_selected(), imgui.SELECTABLE_SPAN_ALL_COLUMNS)
         if selected:
-            # update selctable
-            self.selected = keys
+            # update selectable
+            self.push(keys)
         if imgui.is_item_clicked():
-            # update selctable
-            self.selected = keys
+            # update selectable
+            self.push(keys)
         if open:
             match node:
                 case list():
@@ -185,10 +226,6 @@ class JsonTree:
             imgui.table_headers_row()
 
             # body
-            # imgui.set_next_item_open(True, imgui.ONCE)
-
-            old = self.selected
-
             for k, v in self.root.items():
                 self._traverse(v, k)
 

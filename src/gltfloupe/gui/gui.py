@@ -28,9 +28,11 @@ class View:
             return
         if self.use_begin:
             is_expand, self.visible = imgui.begin(self.name, True)
+            selected = None
             if is_expand:
-                self.drawer()
+                selected = self.drawer()
             imgui.end()
+            return selected
         else:
             self.visible = self.drawer()
 
@@ -115,7 +117,15 @@ class GUI:
 
     def _update(self):
         from .dockspace import dockspace
-        dockspace('docking_space')
+        with dockspace('docking_space'):
+            import fontawesome47.icons_str as ICONS_FA
+
+            if imgui.button(ICONS_FA.ARROW_LEFT):
+                self.tree.back()
+
+            imgui.same_line()
+            if imgui.button(ICONS_FA.ARROW_RIGHT):
+                self.tree.forward()
 
         #
         # imgui menu
@@ -145,9 +155,11 @@ class GUI:
         # imgui widgets
         #
         for v in self.views:
-            v.draw()
+            selected = v.draw()
+            if selected:
+                self.tree.push(selected)
 
-        self.prop.set(self.data, self.tree.selected, self.loader)
+        self.prop.set(self.data, self.tree.get_selected(), self.loader)
 
     def _update_view(self):
         w, h = self.io.display_size
@@ -201,7 +213,7 @@ class GUI:
             self.data = gltfio.parse_path(file)
             self.file = file
             self.tree.root = self.data.gltf
-            self.tree.selected = ()
+            self.tree.push(())
 
             # opengl
             self.loader = gltf_loader.GltfLoader(self.data)
