@@ -70,9 +70,10 @@ def load_font(size):
 
 
 class GUI:
-    def __init__(self, ini: str) -> None:
+    def __init__(self, ini:  Optional[str]) -> None:
         imgui.create_context()
-        imgui.load_ini_settings_from_memory(ini)
+        if ini:
+            imgui.load_ini_settings_from_memory(ini)
         self.io = imgui.get_io()
         self.io.ini_file_name = b''
         load_font(20)

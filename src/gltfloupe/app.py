@@ -12,7 +12,10 @@ class App:
         ini, window_status = config.load()
 
         from .gui.glfw_window import GlfwWindow
-        self.window = GlfwWindow('glTF loupe', window_status)
+        try:
+            self.window = GlfwWindow('glTF loupe', window_status)
+        except:
+            self.window = GlfwWindow('glTF loupe')
 
         from .gui.gui import GUI
         self.gui = GUI(ini)
