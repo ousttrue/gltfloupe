@@ -1,5 +1,5 @@
 import logging
-import imgui
+import cydeer as imgui
 
 
 class ImGuiLogHandler(logging.Handler):
@@ -29,12 +29,12 @@ class ImGuiLogHandler(logging.Handler):
         # clipper.Begin(LineOffsets.Size);
         # while (clipper.Step())
         for log in self.logs:
-            imgui.text_unformatted(log)
+            imgui.TextUnformatted(log)
         # clipper.End();
 
         # if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
         #     ImGui::SetScrollHereY(1.0f);
 
-        imgui.set_scroll_here_y(1.0)
+        imgui.SetScrollHereY(1.0)
 
         # ImGui::EndChild();

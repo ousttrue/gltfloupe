@@ -1,11 +1,11 @@
 from typing import Optional, Any, Callable
 import pathlib
+import ctypes
 import logging
 from dataclasses import dataclass
 
 import glfw
-import imgui
-import imgui.integrations.glfw
+import cydeer as imgui
 from gltfio.parser import GltfData
 from OpenGL import GL
 from .. import gltf_loader
@@ -18,66 +18,64 @@ class View:
     name: str
     drawer: Callable[[], Any]
     use_begin: bool = True
-    visible: bool = True
+    visible: ctypes.Array = (ctypes.c_bool * 1)(True)
 
     def draw(self):
-        if not self.visible:
+        if not self.visible[0]:
             return
 
-        imgui.set_next_window_size(550, 680, condition=imgui.FIRST_USE_EVER)
+        imgui.SetNextWindowSize((550, 680), cond=imgui.ImGuiCond_.FirstUseEver)
         if self.use_begin:
-            is_expand, self.visible = imgui.begin(self.name, True)
             selected = None
-            if is_expand:
+            if imgui.Begin(self.name, self.visible):
                 selected = self.drawer()
-            imgui.end()
+            imgui.End()
             return selected
         else:
-            self.visible = self.drawer()
+            self.visible[0] = self.drawer()
 
 
 def load_font(size):
     '''
     https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#font-loading-instructions
     '''
-    io = imgui.get_io()
+    io = imgui.GetIO()
     # Load a first font
-    fonts: imgui._FontAtlas = io.fonts
+    fonts = io.Fonts
     # fonts.add_font_default()
-    fonts.add_font_from_file_ttf(
-        "C:/Windows/Fonts/MSGothic.ttc", size, None, fonts.get_glyph_ranges_japanese()
+    fonts.AddFontFromFileTTF(
+        "C:/Windows/Fonts/MSGothic.ttc", size, None, fonts.GetGlyphRangesJapanese()
     )
 
     # Add character ranges and merge into the previous font
     # The ranges array is not copied by the AddFont* functions and is used lazily
     # so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
     # Will not be copied by AddFont* so keep in scope.
-    config = imgui.core._FontConfig()
-    config.merge_mode = True
-    config.glyph_min_advance_x = size
+    config = imgui.ImFontConfig()
+    config.MergeMode = True
+    config.GlyphMinAdvanceX = size
     # fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge into first font
 
     import ctypes
     icons_ranges = (ctypes.c_ushort * 3)(0xf000, 0xf3ff, 0)
-    address = ctypes.addressof(icons_ranges)
     import fontawesome47
-    fonts.add_font_from_file_ttf(
+    fonts.AddFontFromFileTTF(
         str(fontawesome47.get_path()), size,
         config,
-        imgui.core._StaticGlyphRanges.from_address(address))
+        icons_ranges)
     # Merge into first font
-    fonts.build()
+    fonts.Build()
 
 
 class GUI:
     def __init__(self, ini:  Optional[str]) -> None:
-        imgui.create_context()
+        imgui.CreateContext()
         if ini:
-            imgui.load_ini_settings_from_memory(ini)
-        self.io = imgui.get_io()
-        self.io.ini_file_name = b''
+            imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
+        self.io: imgui.ImGuiIO = imgui.GetIO()
+        self.io.IniFilename = None
         load_font(20)
-        self.io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
+        self.io.ConfigFlags |= imgui.ImGuiConfigFlags_.DockingEnable
 
         # views
         from .jsontree import JsonTree
@@ -90,7 +88,7 @@ class GUI:
         logging.getLogger().handlers = [self.log_handler]
 
         def show_metrics():
-            return imgui.show_metrics_window(True)
+            return imgui.ShowMetricsWindow()
 
         from .prop import Prop
         self.prop = Prop()
@@ -109,52 +107,48 @@ class GUI:
         self.loader: Optional[gltf_loader.GltfLoader] = None
 
     def initialize(self, window: glfw._GLFWwindow):
-        self.impl = imgui.integrations.glfw.GlfwRenderer(window)
+        from .glfw import GlfwRenderer
+        self.impl_glfw = GlfwRenderer(window)
+        from .opengl import Renderer
+        self.impl_gl = Renderer()
         self.show_json_tree = True
 
-    def save_ini(self) -> str:
-        return imgui.save_ini_settings_to_memory()
+    def save_ini(self) -> bytes:
+        return imgui.SaveIniSettingsToMemory()
 
     def __del__(self):
         del self.controller
         # save ini
-        self.impl.shutdown()
+        del self.impl_gl
 
     def _update(self):
         from .dockspace import dockspace
         with dockspace('docking_space'):
             import fontawesome47.icons_str as ICONS_FA
 
-            if imgui.button(ICONS_FA.ARROW_LEFT):
+            if imgui.Button(ICONS_FA.ARROW_LEFT):
                 self.tree.back()
 
-            imgui.same_line()
-            if imgui.button(ICONS_FA.ARROW_RIGHT):
+            imgui.SameLine()
+            if imgui.Button(ICONS_FA.ARROW_RIGHT):
                 self.tree.forward()
 
         #
         # imgui menu
         #
-        if imgui.begin_main_menu_bar():
-            if imgui.begin_menu("File", True):
+        if imgui.BeginMainMenuBar():
+            if imgui.BeginMenu(b"File", True):
 
-                clicked_quit, selected_quit = imgui.menu_item(
-                    "Quit", 'Cmd+Q', False, True
-                )
-
-                if clicked_quit:
+                if imgui.MenuItem(b"Quit", b'Cmd+Q', False, True):
                     exit(1)
+                imgui.EndMenu()
 
-                imgui.end_menu()
-
-            if imgui.begin_menu("View", True):
+            if imgui.BeginMenu(b"View", True):
                 for v in self.views:
-                    clicked, v.visible = imgui.menu_item(
-                        v.name, '', v.visible, True
-                    )
-                imgui.end_menu()
+                    v.visible[0] = imgui.MenuItem(v.name.encode('utf-8'), b'', v.visible[0], True)
+                imgui.EndMenu()
 
-            imgui.end_main_menu_bar()
+            imgui.EndMainMenuBar()
 
         #
         # imgui widgets
@@ -167,35 +161,35 @@ class GUI:
         self.prop.set(self.data, self.tree.get_selected(), self.loader)
 
     def _update_view(self):
-        w, h = self.io.display_size
+        w, h = self.io.DisplaySize
         self.controller.onResize(w, h)
-        x, y = self.io.mouse_pos
-        if self.io.mouse_down[0]:
+        x, y = self.io.MousePos
+        if self.io.MouseDown[0]:
             self.controller.onLeftDown(x, y)
         else:
             self.controller.onLeftUp(x, y)
-        if self.io.mouse_down[1]:
+        if self.io.MouseDown[1]:
             self.controller.onRightDown(x, y)
         else:
             self.controller.onRightUp(x, y)
-        if self.io.mouse_down[2]:
+        if self.io.MouseDown[2]:
             self.controller.onMiddleDown(x, y)
         else:
             self.controller.onMiddleUp(x, y)
-        if self.io.mouse_wheel:
-            self.controller.onWheel(-self.io.mouse_wheel)
+        if self.io.MouseWheel:
+            self.controller.onWheel(-self.io.MouseWheel)
         self.controller.onMotion(x, y)
 
     def _new_frame(self):
-        self.impl.process_inputs()
-        imgui.new_frame()
+        self.impl_glfw.process_inputs()
+        imgui.NewFrame()
         self._update()
 
         # update controller
-        if not self.io.want_capture_mouse:
+        if not self.io.WantCaptureMouse:
             self._update_view()
 
-        imgui.render()
+        imgui.Render()
 
     def render(self):
         self._new_frame()
@@ -206,7 +200,7 @@ class GUI:
 
         self.controller.draw()
 
-        self.impl.render(imgui.get_draw_data())
+        self.impl_gl.render(imgui.GetDrawData())
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')

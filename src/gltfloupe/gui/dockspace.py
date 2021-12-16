@@ -1,5 +1,5 @@
 import contextlib
-import imgui
+import cydeer as imgui
 '''
 https://gist.github.com/rmitton/f80cbb028fca4495ab1859a155db4cd8
 '''
@@ -8,28 +8,28 @@ TOOLBAR_SIZE = 50
 
 
 def _dockspace(name: str):
-    flags = (imgui.WINDOW_MENU_BAR
-             | imgui.WINDOW_NO_DOCKING
-             | imgui.WINDOW_NO_BACKGROUND
-             | imgui.WINDOW_NO_TITLE_BAR
-             | imgui.WINDOW_NO_COLLAPSE
-             | imgui.WINDOW_NO_RESIZE
-             | imgui.WINDOW_NO_MOVE
-             | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS
-             | imgui.WINDOW_NO_NAV_FOCUS
+    flags = (imgui.ImGuiWindowFlags_.MenuBar
+             | imgui.ImGuiWindowFlags_.NoDocking
+             | imgui.ImGuiWindowFlags_.NoBackground
+             | imgui.ImGuiWindowFlags_.NoTitleBar
+             | imgui.ImGuiWindowFlags_.NoCollapse
+             | imgui.ImGuiWindowFlags_.NoResize
+             | imgui.ImGuiWindowFlags_.NoMove
+             | imgui.ImGuiWindowFlags_.NoBringToFrontOnFocus
+             | imgui.ImGuiWindowFlags_.NoNavFocus
              )
 
-    viewport = imgui.get_main_viewport()
-    x, y = viewport.pos
+    viewport = imgui.GetMainViewport()
+    x, y = viewport.Pos
     y += TOOLBAR_SIZE
-    w, h = viewport.size
+    w, h = viewport.Size
     h -= TOOLBAR_SIZE
 
-    imgui.set_next_window_position(x, y)
-    imgui.set_next_window_size(w, h)
+    imgui.SetNextWindowPos((x, y))
+    imgui.SetNextWindowSize((w, h))
     # imgui.set_next_window_viewport(viewport.id)
-    imgui.push_style_var(imgui.STYLE_WINDOW_BORDERSIZE, 0.0)
-    imgui.push_style_var(imgui.STYLE_WINDOW_ROUNDING, 0.0)
+    imgui.PushStyleVar(imgui.ImGuiStyleVar_.WindowBorderSize, 0.0)
+    imgui.PushStyleVar(imgui.ImGuiStyleVar_.WindowRounding, 0.0)
 
     # When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
     # local window_flags = self.window_flags
@@ -42,19 +42,22 @@ def _dockspace(name: str):
     # all active windows docked into it will lose their parent and become undocked.
     # We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
     # any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-    imgui.push_style_var(imgui.STYLE_WINDOW_PADDING, (0, 0))
-    imgui.begin(name, None, flags)
-    imgui.pop_style_var()
-    imgui.pop_style_var(2)
+    imgui.PushStyleVar_2(imgui.ImGuiStyleVar_.WindowPadding, (0, 0))
+    imgui.Begin(name, None, flags)
+    imgui.PopStyleVar()
+    imgui.PopStyleVar(2)
 
+    # TODO:
     # Save off menu bar height for later.
-    menubar_height = imgui.internal.get_current_window().menu_bar_height()
+    # menubar_height = imgui.internal.get_current_window().menu_bar_height()
+    menubar_height = 30
 
     # DockSpace
-    dockspace_id = imgui.get_id(name)
-    imgui.dockspace(dockspace_id, (0, 0), imgui.DOCKNODE_PASSTHRU_CENTRAL_NODE)
+    dockspace_id = imgui.GetID(name)
+    imgui.DockSpace(dockspace_id, (0, 0),
+                    imgui.ImGuiDockNodeFlags_.PassthruCentralNode)
 
-    imgui.end()
+    imgui.End()
 
     return menubar_height
 
@@ -64,24 +67,23 @@ def dockspace(name: str):
     menubar_height = _dockspace(name)
 
     # toolbar
-    viewport: imgui._ImGuiViewport = imgui.get_main_viewport()
-    imgui.set_next_window_position(
-        viewport.pos.x, viewport.pos.y + menubar_height)
-    imgui.set_next_window_size(viewport.size.x, TOOLBAR_SIZE)
+    viewport: imgui.ImGuiViewport = imgui.GetMainViewport()
+    imgui.SetNextWindowPos((viewport.Pos.x, viewport.Pos.y + menubar_height))
+    imgui.SetNextWindowSize((viewport.Size.x, TOOLBAR_SIZE))
     # imgui.SetNextWindowViewport(viewport -> ID);
 
     window_flags = (0
-                    | imgui.WINDOW_NO_DOCKING
-                    | imgui.WINDOW_NO_TITLE_BAR
-                    | imgui.WINDOW_NO_RESIZE
-                    | imgui.WINDOW_NO_MOVE
-                    | imgui.WINDOW_NO_SCROLLBAR
-                    | imgui.WINDOW_NO_SAVED_SETTINGS
+                    | imgui.ImGuiWindowFlags_.NoDocking
+                    | imgui.ImGuiWindowFlags_.NoTitleBar
+                    | imgui.ImGuiWindowFlags_.NoResize
+                    | imgui.ImGuiWindowFlags_.NoMove
+                    | imgui.ImGuiWindowFlags_.NoScrollbar
+                    | imgui.ImGuiWindowFlags_.NoSavedSettings
                     )
-    imgui.push_style_var(imgui.STYLE_WINDOW_BORDERSIZE, 0)
-    imgui.begin("TOOLBAR", None, window_flags)
-    imgui.pop_style_var()
+    imgui.PushStyleVar(imgui.ImGuiStyleVar_.WindowBorderSize, 0)
+    imgui.Begin("TOOLBAR", None, window_flags)
+    imgui.PopStyleVar()
 
     yield
 
-    imgui.end()
+    imgui.End()

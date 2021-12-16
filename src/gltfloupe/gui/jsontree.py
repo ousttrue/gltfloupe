@@ -1,6 +1,6 @@
 import logging
 from typing import Union, Optional, Any, Tuple, List
-import imgui
+import cydeer as imgui
 import fontawesome47.icons_str as ICONS_FA
 logger = logging.getLogger(__name__)
 
@@ -215,30 +215,30 @@ class JsonTree:
             case dict():
                 value = node.get('name', '')
             case _:
-                flag |= imgui.TREE_NODE_LEAF
-                flag |= imgui.TREE_NODE_BULLET
+                flag |= imgui.ImGuiTreeNodeFlags_.Leaf
+                flag |= imgui.ImGuiTreeNodeFlags_.Bullet
                 # flag |= imgui.TREE_NODE_NO_TREE_PUSH_ON_OPEN
                 value = f'{node}'
         selected = self.get_selected()
         if tuple_status_with(keys, selected):
             if len(keys) < len(selected):
-                imgui.set_next_item_open(True, imgui.ONCE)
-        imgui.table_next_row()
+                imgui.SetNextItemOpen(True, imgui.ImGuiCond_.Once)
+        imgui.TableNextRow()
         # col 0
-        imgui.table_next_column()
-        open = imgui.tree_node(f'{get_icon(keys)} {keys[-1]}', flag)
-        imgui.set_item_allow_overlap()
+        imgui.TableNextColumn()
+        open = imgui.TreeNodeEx(f'{get_icon(keys)} {keys[-1]}', flag)
+        imgui.SetItemAllowOverlap()
         # col 1
-        imgui.table_next_column()
-        _, selected = imgui.selectable(
-            value, keys == self.get_selected(), imgui.SELECTABLE_SPAN_ALL_COLUMNS)
-        if imgui.is_mouse_double_clicked() and imgui.is_item_clicked():
+        imgui.TableNextColumn()
+        # selected = imgui.Selectable(
+        #     value, keys == self.get_selected(), imgui.ImGuiSelectableFlags_.SpanAllColumns)
+        if imgui.IsMouseDoubleClicked(0) and imgui.IsItemClicked():
             # update selectable
             dst = can_jump(keys, node)
             if dst:
                 logger.debug('double clicked')
                 self.push(dst)
-        elif imgui.is_item_clicked():
+        elif imgui.IsItemClicked():
             # update selectable
             logger.debug('clicked')
             self.push(keys)
@@ -255,26 +255,26 @@ class JsonTree:
                 case dict():
                     for k, v in node.items():
                         self._traverse(v, *keys, k)
-            imgui.tree_pop()
+            imgui.TreePop()
 
     def draw(self):
         if not self.root:
             return
         flags = (
-            imgui.TABLE_BORDERS_VERTICAL
-            | imgui.TABLE_BORDERS_OUTER_HORIZONTAL
-            | imgui.TABLE_RESIZABLE
-            | imgui.TABLE_ROW_BACKGROUND
-            | imgui.TABLE_NO_BORDERS_IN_BODY
+            imgui.ImGuiTableFlags_.BordersV
+            | imgui.ImGuiTableFlags_.BordersOuterH
+            | imgui.ImGuiTableFlags_.Resizable
+            | imgui.ImGuiTableFlags_.RowBg
+            | imgui.ImGuiTableFlags_.NoBordersInBody
         )
-        if imgui.begin_table("jsontree_table", 2, flags):
+        if imgui.BeginTable("jsontree_table", 2, flags):
             # header
-            imgui.table_setup_column("key")
-            imgui.table_setup_column("value")
-            imgui.table_headers_row()
+            imgui.TableSetupColumn("key")
+            imgui.TableSetupColumn("value")
+            imgui.TableHeadersRow()
 
             # body
             for k, v in self.root.items():
                 self._traverse(v, k)
 
-            imgui.end_table()
+            imgui.EndTable()

@@ -3,7 +3,7 @@ from typing import Optional, List, NamedTuple, Union
 import dataclasses
 import json
 import io
-import imgui
+import cydeer as imgui
 from gltfio.parser import GltfData
 from ..gltf_loader import GltfLoader
 from ..jsonutil import get_value, to_pretty
