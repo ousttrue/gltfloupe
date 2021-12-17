@@ -77,28 +77,28 @@ class GlfwRenderer:
         io = self.io
 
         if action == glfw.PRESS:
-            io.keys_down[key] = True
+            io.KeysDown[key] = True
         elif action == glfw.RELEASE:
-            io.keys_down[key] = False
+            io.KeysDown[key] = False
 
-        io.key_ctrl = (
-            io.keys_down[glfw.KEY_LEFT_CONTROL] or
-            io.keys_down[glfw.KEY_RIGHT_CONTROL]
+        io.KeyCtrl = (
+            io.KeysDown[glfw.KEY_LEFT_CONTROL] or
+            io.KeysDown[glfw.KEY_RIGHT_CONTROL]
         )
 
-        io.key_alt = (
-            io.keys_down[glfw.KEY_LEFT_ALT] or
-            io.keys_down[glfw.KEY_RIGHT_ALT]
+        io.KeyAlt = (
+            io.KeysDown[glfw.KEY_LEFT_ALT] or
+            io.KeysDown[glfw.KEY_RIGHT_ALT]
         )
 
-        io.key_shift = (
-            io.keys_down[glfw.KEY_LEFT_SHIFT] or
-            io.keys_down[glfw.KEY_RIGHT_SHIFT]
+        io.KeyShift = (
+            io.KeysDown[glfw.KEY_LEFT_SHIFT] or
+            io.KeysDown[glfw.KEY_RIGHT_SHIFT]
         )
 
-        io.key_super = (
-            io.keys_down[glfw.KEY_LEFT_SUPER] or
-            io.keys_down[glfw.KEY_RIGHT_SUPER]
+        io.KeySuper = (
+            io.KeysDown[glfw.KEY_LEFT_SUPER] or
+            io.KeysDown[glfw.KEY_RIGHT_SUPER]
         )
 
     def char_callback(self, window, char):
@@ -112,8 +112,8 @@ class GlfwRenderer:
         pass
 
     def scroll_callback(self, window, x_offset, y_offset):
-        self.io.mouse_wheel_horizontal = x_offset
-        self.io.mouse_wheel = y_offset
+        self.io.MouseWheelH = x_offset
+        self.io.MouseWheel = y_offset
 
     def process_inputs(self):
         io = self.io

@@ -70,7 +70,7 @@ def load_font(size):
 class GUI:
     def __init__(self, ini:  Optional[str]) -> None:
         imgui.CreateContext()
-        if ini:
+        if isinstance(ini, str):
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
         self.io: imgui.ImGuiIO = imgui.GetIO()
         self.io.IniFilename = None
@@ -107,9 +107,9 @@ class GUI:
         self.loader: Optional[gltf_loader.GltfLoader] = None
 
     def initialize(self, window: glfw._GLFWwindow):
-        from .glfw import GlfwRenderer
+        from .pyimgui_backend.glfw import GlfwRenderer
         self.impl_glfw = GlfwRenderer(window)
-        from .opengl import Renderer
+        from .pyimgui_backend.opengl import Renderer
         self.impl_gl = Renderer()
         self.show_json_tree = True
 
