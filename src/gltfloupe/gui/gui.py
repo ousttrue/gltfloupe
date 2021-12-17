@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class View:
     name: str
     drawer: Callable[[], Any]
+    visible: ctypes.Array
     use_begin: bool = True
-    visible: ctypes.Array = (ctypes.c_bool * 1)(True)
 
     def draw(self):
         if not self.visible[0]:
@@ -32,7 +32,7 @@ class View:
             imgui.End()
             return selected
         else:
-            self.visible[0] = self.drawer()
+            self.drawer()
 
 
 def load_font(size):
@@ -53,6 +53,11 @@ def load_font(size):
     # Will not be copied by AddFont* so keep in scope.
     config = imgui.ImFontConfig()
     config.MergeMode = True
+    config.FontDataOwnedByAtlas = True
+    config.RasterizerMultiply = 1.0
+    config.OversampleH = 3
+    config.OversampleV = 1
+    config.GlyphMaxAdvanceX = 99999
     config.GlyphMinAdvanceX = size
     # fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge into first font
 
@@ -94,10 +99,10 @@ class GUI:
         self.prop = Prop()
 
         self.views = [
-            View('json', self.tree.draw),
-            View('log', self.log_handler.draw),
-            View('metrics', show_metrics, False),
-            View('prop', self.prop.draw),
+            View('json', self.tree.draw, (ctypes.c_bool * 1)(True)),
+            View('log', self.log_handler.draw, (ctypes.c_bool * 1)(True)),
+            View('metrics', show_metrics, (ctypes.c_bool * 1)(True), False),
+            View('prop', self.prop.draw, (ctypes.c_bool * 1)(True)),
         ]
 
         # gl
@@ -145,7 +150,7 @@ class GUI:
 
             if imgui.BeginMenu(b"View", True):
                 for v in self.views:
-                    v.visible[0] = imgui.MenuItem(v.name.encode('utf-8'), b'', v.visible[0], True)
+                    imgui.MenuItem_2(v.name, b'', v.visible)
                 imgui.EndMenu()
 
             imgui.EndMainMenuBar()

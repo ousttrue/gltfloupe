@@ -254,7 +254,7 @@ class Renderer:
         del self._shader
         del self._texture
         io = imgui.GetIO()
-        io.fonts.TexID = 0
+        io.Fonts.TexID = 0
 
     def refresh_font_texture(self):
         if self._texture:

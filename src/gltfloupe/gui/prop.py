@@ -1,3 +1,4 @@
+import ctypes
 import logging
 from typing import Optional, List, NamedTuple, Union
 import dataclasses
@@ -49,14 +50,14 @@ class TextContent(NamedTuple):
     content: str
 
     def draw(self):
-        imgui.text_unformatted(self.content)
+        imgui.TextUnformatted(self.content)
 
 
 class JumpContent(NamedTuple):
     keys: tuple
 
     def draw(self):
-        if imgui.button(str(self.keys)):
+        if imgui.Button(str(self.keys)):
             return self.keys
 
 
@@ -64,13 +65,11 @@ class JumpContent(NamedTuple):
 class Item:
     name: str
     content: Union[TextContent, JumpContent, AccessorTable]
-    visible = True
+    visible: ctypes.Array
 
     def draw(self):
-        imgui.set_next_item_open(True, imgui.ONCE)
-        expanded, self.visible = imgui.collapsing_header(
-            self.name, self.visible)
-        if expanded:
+        imgui.SetNextItemOpen(True, imgui.ImGuiCond_.Once)
+        if imgui.CollapsingHeader_2(self.name, self.visible):
             return self.content.draw()
 
 
@@ -90,49 +89,50 @@ class Prop:
 
         if self.data and loader:
             value = get_value(self.data.gltf, self.key)
-            self.contents.append(Item('json', TextContent(to_pretty(value))))
+            self.contents.append(Item('json', TextContent(
+                to_pretty(value)), (ctypes.c_bool * 1)(True)))
 
             match self.key:
                 case ('nodes', node_index):
                     node = self.data.nodes[node_index]
                     if node.mesh:
                         self.contents.append(
-                            Item('ref to', JumpContent(('meshes', node.mesh.index))))
+                            Item('ref to', JumpContent(('meshes', node.mesh.index)), (ctypes.c_bool * 1)(True)))
                     if node.skin:
                         self.contents.append(
-                            Item('ref to', JumpContent(('skins', node.skin.index))))
+                            Item('ref to', JumpContent(('skins', node.skin.index)), (ctypes.c_bool * 1)(True)))
 
                 case ('nodes', node_index, 'skin'):
                     self.contents.append(Item('node_debug', TextContent(node_debug(
-                        self.data, node_index, loader))))
+                        self.data, node_index, loader)), (ctypes.c_bool * 1)(True)))
 
                 case ('skins', skin_index):
                     # ref from
                     for node in self.data.nodes:
                         if node.skin and node.skin.index == skin_index:
                             self.contents.append(
-                                Item('ref from', JumpContent(('nodes', node.index))))
+                                Item('ref from', JumpContent(('nodes', node.index)), (ctypes.c_bool * 1)(True)))
 
                     from .. import skin_debug
                     self.contents.append(Item('skin_debug', TextContent(skin_debug.get_debug_info(
-                        self.data, skin_index, loader))))
+                        self.data, skin_index, loader)), (ctypes.c_bool * 1)(True)))
 
             match get_accessor(self.data, key):
                 case int() as accessor_index:
                     accessor = self.data.buffer_reader.read_accessor(
                         accessor_index)
                     self.contents.append(
-                        Item('accessor', AccessorTable(key, accessor)))
+                        Item('accessor', AccessorTable(key, accessor), (ctypes.c_bool * 1)(True)))
 
     def draw(self) -> Optional[tuple]:
         '''
         return selected keys
         '''
         if not self.data:
-            imgui.text('not gltf')
+            imgui.Text('not gltf')
             return
 
-        imgui.text_unformatted(str(self.key))
+        imgui.TextUnformatted(str(self.key))
 
         selected = None
         for item in self.contents:
