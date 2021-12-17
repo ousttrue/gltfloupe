@@ -28,7 +28,7 @@ class App:
         del self.gui
         status = self.window.get_status()
         del self.window
-        config.save(ini, status)
+        config.save(ini.decode('utf-8'), status)
 
     def run(self):
         while self.window.new_frame():

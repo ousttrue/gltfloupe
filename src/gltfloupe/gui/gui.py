@@ -75,12 +75,12 @@ def load_font(size):
 class GUI:
     def __init__(self, ini:  Optional[str]) -> None:
         imgui.CreateContext()
+        self.io: imgui.ImGuiIO = imgui.GetIO()
+        self.io.ConfigFlags |= imgui.ImGuiConfigFlags_.DockingEnable
         if isinstance(ini, str):
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
-        self.io: imgui.ImGuiIO = imgui.GetIO()
         self.io.IniFilename = None
         load_font(20)
-        self.io.ConfigFlags |= imgui.ImGuiConfigFlags_.DockingEnable
 
         # views
         from .jsontree import JsonTree
