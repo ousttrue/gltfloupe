@@ -27,19 +27,19 @@ class AccessorTable:
 
     def draw(self):
         flags = (
-            imgui.TABLE_BORDERS_VERTICAL
-            | imgui.TABLE_BORDERS_OUTER_HORIZONTAL
-            | imgui.TABLE_RESIZABLE
-            | imgui.TABLE_ROW_BACKGROUND
-            | imgui.TABLE_NO_BORDERS_IN_BODY
+            imgui.ImGuiTableFlags_.BordersV
+            | imgui.ImGuiTableFlags_.BordersOuterH
+            | imgui.ImGuiTableFlags_.Resizable
+            | imgui.ImGuiTableFlags_.RowBg
+            | imgui.ImGuiTableFlags_.NoBordersInBody
         )
-        if imgui.begin_table("jsontree_table", self.view.element_count+1, flags):
+        if imgui.BeginTable("jsontree_table", self.view.element_count+1, flags):
             # header
             # imgui.TableSetupScrollFreeze(0, 1); // Make top row always visible
-            imgui.table_setup_column('index')
+            imgui.TableSetupColumn('index')
             for i in range(self.view.element_count):
-                imgui.table_setup_column(f'{i}')
-            imgui.table_headers_row()
+                imgui.TableSetupColumn(f'{i}')
+            imgui.TableHeadersRow()
 
             # body
             # imgui._ImGuiListClipper clipper;
@@ -48,14 +48,14 @@ class AccessorTable:
             i = 0
             count = self.view.get_count()
             while i < count:
-                imgui.table_next_row()
+                imgui.TableNextRow()
                 # index
-                imgui.table_next_column()
-                imgui.text_unformatted(f'{i:05}')
+                imgui.TableNextColumn()
+                imgui.TextUnformatted(f'{i:05}')
                 #
                 for j in range(self.view.element_count):
-                    imgui.table_next_column()
-                    imgui.text_unformatted(f'{next(it):.3f}')
+                    imgui.TableNextColumn()
+                    imgui.TextUnformatted(f'{next(it):.3f}')
                 i += 1
 
-            imgui.end_table()
+            imgui.EndTable()

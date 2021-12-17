@@ -32,7 +32,7 @@ class View:
             imgui.End()
             return selected
         else:
-            self.drawer()
+            self.drawer(self.visible)  # type: ignore
 
 
 def load_font(size):
@@ -92,8 +92,8 @@ class GUI:
             '%(levelname)s:%(name)s:%(message)s'))
         logging.getLogger().handlers = [self.log_handler]
 
-        def show_metrics():
-            return imgui.ShowMetricsWindow()
+        def show_metrics(p_open):
+            return imgui.ShowMetricsWindow(p_open)
 
         from .prop import Prop
         self.prop = Prop()
