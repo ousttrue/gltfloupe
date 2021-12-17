@@ -230,8 +230,8 @@ class JsonTree:
         imgui.SetItemAllowOverlap()
         # col 1
         imgui.TableNextColumn()
-        # selected = imgui.Selectable(
-        #     value, keys == self.get_selected(), imgui.ImGuiSelectableFlags_.SpanAllColumns)
+        selected = imgui.Selectable(
+            f'{value}##{keys}', keys == self.get_selected(), imgui.ImGuiSelectableFlags_.SpanAllColumns)
         if imgui.IsMouseDoubleClicked(0) and imgui.IsItemClicked():
             # update selectable
             dst = can_jump(keys, node)
