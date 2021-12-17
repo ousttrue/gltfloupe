@@ -79,7 +79,7 @@ class GUI:
         self.io.ConfigFlags |= imgui.ImGuiConfigFlags_.DockingEnable
         if isinstance(ini, str):
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
-        self.io.IniFilename = None
+        self.io.IniFilename = None  # type: ignore
         load_font(20)
 
         # views
@@ -95,14 +95,25 @@ class GUI:
         def show_metrics(p_open):
             return imgui.ShowMetricsWindow(p_open)
 
+        def show_demo(p_open):
+            return imgui.ShowDemoWindow(p_open)
+
         from .prop import Prop
         self.prop = Prop()
+
+        from .animation import Playback
+        self.playback = Playback()
 
         self.views = [
             View('json', self.tree.draw, (ctypes.c_bool * 1)(True)),
             View('log', self.log_handler.draw, (ctypes.c_bool * 1)(True)),
-            View('metrics', show_metrics, (ctypes.c_bool * 1)(True), False),
             View('prop', self.prop.draw, (ctypes.c_bool * 1)(True)),
+            View('playback', self.playback.draw, (ctypes.c_bool * 1)(True)),
+            #
+            View('metrics', show_metrics, (ctypes.c_bool * 1)  # type: ignore
+                 (True), False),
+            View('demo', show_demo, (ctypes.c_bool * 1)  # type: ignore
+                 (True), False),
         ]
 
         # gl
@@ -182,7 +193,7 @@ class GUI:
         else:
             self.controller.onMiddleUp(x, y)
         if self.io.MouseWheel:
-            self.controller.onWheel(-self.io.MouseWheel)
+            self.controller.onWheel(int(-self.io.MouseWheel))
         self.controller.onMotion(x, y)
 
     def _new_frame(self):
@@ -209,6 +220,7 @@ class GUI:
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
+        self.file = None
         self.data = None
         self.tree.root = None
 
@@ -219,15 +231,21 @@ class GUI:
             self.tree.root = self.data.gltf
             self.tree.push(())
 
-            # opengl
+            # load opengl scene
             self.loader = gltf_loader.GltfLoader(self.data)
             scene = self.loader.load()
             scene.calc_world()
             self.controller.scene.drawables = [scene]  # type: ignore
+
+            # fit camera
             from glglue.ctypesmath import AABB
             aabb = AABB.new_empty()
             aabb = scene.expand_aabb(aabb)
             self.controller.camera.fit(*aabb)
+
+            # animation
+            if self.loader.animations:
+                self.playback.time = self.loader.animations[0].last_time
 
         except Exception as e:
             logger.exception(e)

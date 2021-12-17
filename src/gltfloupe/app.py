@@ -20,8 +20,6 @@ class App:
         from .gui.gui import GUI
         self.gui = GUI(ini)
         self.gui.initialize(self.window.window)  # type: ignore
-        if len(sys.argv) > 1:
-            self.gui.open(pathlib.Path(sys.argv[1]))
 
     def __del__(self):
         ini = self.gui.save_ini()
@@ -40,4 +38,7 @@ def run():
     logging.basicConfig(level=logging.DEBUG)
 
     app = App()
+    if len(sys.argv) > 1:
+        app.gui.open(pathlib.Path(sys.argv[1]))
+
     app.run()

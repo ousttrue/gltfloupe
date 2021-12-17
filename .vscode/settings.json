@@ -1,9 +1,14 @@
 {
     "cSpell.words": [
+        "aabb",
         "glfw",
+        "glglue",
         "gltf",
+        "gltfio",
         "gltfloupe",
-        "imgui"
+        "imgui",
+        "opengl",
+        "pyimgui"
     ],
     "python.testing.unittestArgs": [
         "-v",
