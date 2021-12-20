@@ -35,43 +35,6 @@ class View:
             self.drawer(self.visible)  # type: ignore
 
 
-def load_font(size):
-    '''
-    https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#font-loading-instructions
-    '''
-    io = imgui.GetIO()
-    # Load a first font
-    fonts = io.Fonts
-    # fonts.add_font_default()
-    fonts.AddFontFromFileTTF(
-        "C:/Windows/Fonts/MSGothic.ttc", size, None, fonts.GetGlyphRangesJapanese()
-    )
-
-    # Add character ranges and merge into the previous font
-    # The ranges array is not copied by the AddFont* functions and is used lazily
-    # so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
-    # Will not be copied by AddFont* so keep in scope.
-    config = imgui.ImFontConfig()
-    config.MergeMode = True
-    config.FontDataOwnedByAtlas = True
-    config.RasterizerMultiply = 1.0
-    config.OversampleH = 3
-    config.OversampleV = 1
-    config.GlyphMaxAdvanceX = 99999
-    config.GlyphMinAdvanceX = size
-    # fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge into first font
-
-    import ctypes
-    icons_ranges = (ctypes.c_ushort * 3)(0xf000, 0xf3ff, 0)
-    import fontawesome47
-    fonts.AddFontFromFileTTF(
-        str(fontawesome47.get_path()), size,
-        config,
-        icons_ranges)
-    # Merge into first font
-    fonts.Build()
-
-
 class GUI:
     def __init__(self, ini:  Optional[str]) -> None:
         imgui.CreateContext()
@@ -80,7 +43,15 @@ class GUI:
         if isinstance(ini, str):
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
         self.io.IniFilename = None  # type: ignore
-        load_font(20)
+
+        from cydeer.utils import fontloader
+        fontloader.load(pathlib.Path(
+            'C:/Windows/Fonts/MSGothic.ttc'), 20.0, self.io.Fonts.GetGlyphRangesJapanese())
+        import fontawesome47
+        font_range = (ctypes.c_ushort * 3)(*fontawesome47.RANGE, 0)
+        fontloader.load(fontawesome47.get_path(), 20.0,
+                        font_range, merge=True, monospace=True)
+        self.io.Fonts.Build()
 
         # views
         from .jsontree import JsonTree
