@@ -91,17 +91,17 @@ class Prop:
         if self.data and loader:
             value = get_value(self.data.gltf, self.key)
             self.contents.append(Item('json', TextContent(
-                to_pretty(value)), (ctypes.c_bool * 1)(True)))
+                to_pretty(value))))
 
             match self.key:
                 case ('nodes', node_index):
                     node = self.data.nodes[node_index]
                     if node.mesh:
                         self.contents.append(
-                            Item('ref to', JumpContent(('meshes', node.mesh.index)), (ctypes.c_bool * 1)(True)))
+                            Item('ref to', JumpContent(('meshes', node.mesh.index))))
                     if node.skin:
                         self.contents.append(
-                            Item('ref to', JumpContent(('skins', node.skin.index)), (ctypes.c_bool * 1)(True)))
+                            Item('ref to', JumpContent(('skins', node.skin.index))))
 
                 case ('nodes', node_index, 'skin'):
                     self.contents.append(Item('node_debug', TextContent(node_debug(
