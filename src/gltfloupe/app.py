@@ -1,44 +1,42 @@
 import sys
 import pathlib
 import logging
-from . import config
 
 logger = logging.getLogger(__name__)
-
-
-class App:
-    def __init__(self) -> None:
-
-        ini, window_status = config.load()
-
-        from .gui.glfw_window import GlfwWindow
-        try:
-            self.window = GlfwWindow('glTF loupe', window_status)
-        except:
-            self.window = GlfwWindow('glTF loupe')
-
-        from .gui.gui import GUI
-        self.gui = GUI(ini)
-        self.gui.initialize(self.window.window)  # type: ignore
-
-    def __del__(self):
-        ini = self.gui.save_ini()
-        del self.gui
-        status = self.window.get_status()
-        del self.window
-        config.save(ini.decode('utf-8'), status)
-
-    def run(self):
-        while self.window.new_frame():
-            self.gui.render()
-            self.window.end_frame()
 
 
 def run():
     logging.basicConfig(level=logging.DEBUG)
 
-    app = App()
-    if len(sys.argv) > 1:
-        app.gui.open(pathlib.Path(sys.argv[1]))
+    from . import config
+    ini, window_status = config.load()
 
-    app.run()
+    logger.debug(f'{window_status}')
+
+    from .gui.gui import GUI
+    controller = GUI(ini)
+    if len(sys.argv) > 1:
+        controller.open(pathlib.Path(sys.argv[1]))
+
+    import glglue.glfw
+    loop = glglue.glfw.LoopManager(controller,
+                                   title='glfw loupe',
+                                   width=window_status.width if window_status else 1280,
+                                   height=window_status.height if window_status else 720,
+                                   is_maximized=window_status.is_maximized if window_status else False)
+
+    lastCount = 0
+    while True:
+        count = loop.begin_frame()
+        if not count:
+            window_status = loop.get_status()
+            break
+        d = count - lastCount
+        lastCount = count
+        if d > 0:
+            controller.onUpdate(d)
+            controller.draw()
+            loop.end_frame()
+
+    ini = controller.save_ini()
+    config.save(ini.decode('utf-8'), window_status)  # type: ignore

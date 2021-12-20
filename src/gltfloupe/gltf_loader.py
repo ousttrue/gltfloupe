@@ -11,6 +11,7 @@ from glglue.scene.material import Material
 from glglue.scene.mesh import Mesh
 from glglue.scene.node import Node
 from glglue.scene.vertices import VectorView, Planar
+from .animation import Animation
 
 logger = logging.getLogger(__name__)
 
@@ -33,78 +34,6 @@ MAP = {
     'L': ctypes.c_uint32,
     'f': ctypes.c_float,
 }
-
-
-class Curve:
-    def __init__(self, node: Node, element_count: int, count: int) -> None:
-        self.node = node
-        self.element_count = element_count
-        self.times = (ctypes.c_float * count)()
-        self.values = (ctypes.c_float * (element_count * count))()
-
-    def __str__(self) -> str:
-        return f'{self.node.name}.{self.target}: {self.times[-1]} sec'
-
-    @property
-    def target(self) -> str:
-        raise NotImplementedError()
-
-    def set(self, pos: int, time: float, value: tuple):
-        self.times[pos] = time
-        i = pos * self.element_count
-        for v in value:
-            self.values[i]
-            i += 1
-
-
-class TranslationCurve(Curve):
-    def __init__(self, node: Node, count: int) -> None:
-        super().__init__(node, 3, count)
-
-    @property
-    def target(self) -> str:
-        return 'target'
-
-
-class RotationCurve(Curve):
-    def __init__(self, node: Node, count: int) -> None:
-        super().__init__(node, 4, count)
-
-    @property
-    def target(self) -> str:
-        return 'rotation'
-
-
-class ScaleCurve(Curve):
-    def __init__(self, node: Node, count: int) -> None:
-        super().__init__(node, 3, count)
-
-    @property
-    def target(self) -> str:
-        return 'scale'
-
-
-class WeightCurve(Curve):
-    def __init__(self, node: Node, count: int) -> None:
-        super().__init__(node, 1, count)
-
-    @property
-    def target(self) -> str:
-        return 'weight'
-
-
-class Animation:
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.curves = []
-        self.last_time = 0
-
-    def add_curve(self, curve: Curve):
-        self.curves.append(curve)
-
-        curve_time = curve.times[-1]
-        if curve_time > self.last_time:
-            self.last_time = curve_time
 
 
 def get_vectorview(src: GltfAccessorSlice) -> VectorView:
@@ -139,7 +68,10 @@ class GltfLoader:
         self.materials: List[Material] = []
         self.meshes: List[List[Mesh]] = []
         self.nodes: List[Node] = []
+        self.root: Optional[Node] = None
+        # animation
         self.animations: List[Animation] = []
+        self.time = 0.0
 
     def _load_image(self, src: GltfImage):
         image = Image32.load(src.data)
@@ -192,40 +124,7 @@ class GltfLoader:
             self._build_node_hierarchy(gltf_node.children, node)
 
     def _load_animation(self, src: GltfAnimation):
-        animation = Animation(src.name)
-        for ch in src.channels:
-            node = ch.target.node_index
-            curve = None
-            sampler = src.samplers[ch.sampler]
-            match ch.target.path:
-                case GltfAnimationTargetPath.Translation:
-                    curve = TranslationCurve(
-                        self.nodes[node.index], sampler.input.get_count())
-                    animation.add_curve(curve)
-                case GltfAnimationTargetPath.Rotation:
-                    curve = RotationCurve(
-                        self.nodes[node.index], sampler.input.get_count())
-                    animation.add_curve(curve)
-                case GltfAnimationTargetPath.Scale:
-                    curve = ScaleCurve(
-                        self.nodes[node.index], sampler.input.get_count())
-                    animation.add_curve(curve)
-                case GltfAnimationTargetPath.Weights:
-                    curve = WeightCurve(
-                        self.nodes[node.index], sampler.input.get_count())
-                    animation.add_curve(curve)
-                case _:
-                    raise NotImplementedError()
-
-            match sampler.interpolation:
-                case GltfAnimationInterpolation.Linear:
-                    for i, (time, value) in enumerate(zip(sampler.input, sampler.output)):
-                        curve.set(i, time[0], value)
-                case _:
-                    raise NotImplementedError()
-            animation.add_curve(curve)
-            # logger.debug(f'{curve}')
-
+        animation = Animation.from_gltf(src, self.nodes)
         self.animations.append(animation)
 
     def load(self) -> Node:
@@ -245,6 +144,21 @@ class GltfLoader:
             self._load_animation(animation)
 
         # root
-        scene = Node('__scene__', ctypesmath.Mat4.new_identity())
-        self._build_node_hierarchy(self.gltf.scene, scene)
-        return scene
+        self.root = Node('__scene__', ctypesmath.Mat4.new_identity())
+        self._build_node_hierarchy(self.gltf.scene, self.root)
+        return self.root
+
+    def set_time(self, time: float):
+        if self.time == time:
+            return
+
+        for animation in self.animations:
+            animation.set_time(time)
+
+        if self.root:
+            self.root.calc_world()
+
+        # update CPU skinning
+        for node in self.nodes:
+            if node.meshes:
+                pass

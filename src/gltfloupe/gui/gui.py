@@ -1,37 +1,30 @@
-from typing import Optional, Any, Callable
+from typing import Optional
 import pathlib
 import ctypes
 import logging
-from dataclasses import dataclass
-
-import glfw
+#
+from glglue.gl3.cydeercontroller import CydeerController
+#
 import cydeer as imgui
-from gltfio.parser import GltfData
-from OpenGL import GL
-from .. import gltf_loader
 from cydeer.utils.dockspace import dockspace, DockView
+#
+from gltfio.parser import GltfData
+from .. import gltf_loader
 
 logger = logging.getLogger(__name__)
 
 
-class GUI:
+class GUI(CydeerController):
     def __init__(self, ini:  Optional[str]) -> None:
+        super().__init__()
+
+        # imgui
         imgui.CreateContext()
         self.io: imgui.ImGuiIO = imgui.GetIO()
         self.io.ConfigFlags |= imgui.ImGuiConfigFlags_.DockingEnable
         if isinstance(ini, str):
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
         self.io.IniFilename = None  # type: ignore
-
-        # font load
-        from cydeer.utils import fontloader
-        fontloader.load(pathlib.Path(
-            'C:/Windows/Fonts/MSGothic.ttc'), 20.0, self.io.Fonts.GetGlyphRangesJapanese())
-        import fontawesome47
-        font_range = (ctypes.c_ushort * 3)(*fontawesome47.RANGE, 0)
-        fontloader.load(fontawesome47.get_path(), 20.0,
-                        font_range, merge=True, monospace=True)
-        self.io.Fonts.Build()
 
         # views
         from .jsontree import JsonTree
@@ -49,36 +42,39 @@ class GUI:
         from .animation import Playback
         self.playback = Playback()
 
+        from glglue.gl3.cameraview import CameraView
+        self.view = CameraView()
+
         self.views = [
             DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw),
             DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
             DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
-            DockView('playback', (ctypes.c_bool * 1)(True), self.playback.draw),
+            DockView('playback', (ctypes.c_bool * 1)
+                     (True), self.playback.draw),
+            DockView('view', (ctypes.c_bool * 1)(True), self.view.draw),
             #
-            DockView('metrics', (ctypes.c_bool * 1)(True), imgui.ShowMetricsWindow),
+            DockView('metrics', (ctypes.c_bool * 1)
+                     (True), imgui.ShowMetricsWindow),
             DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow),
         ]
 
         # gl
-        import glglue.gl3.samplecontroller
-        self.controller = glglue.gl3.samplecontroller.SampleController()
         self.data: Optional[GltfData] = None
         self.loader: Optional[gltf_loader.GltfLoader] = None
 
-    def initialize(self, window: glfw._GLFWwindow):
-        from .pyimgui_backend.glfw import GlfwRenderer
-        self.impl_glfw = GlfwRenderer(window)
-        from .pyimgui_backend.opengl import Renderer
-        self.impl_gl = Renderer()
-        self.show_json_tree = True
+    def load_font(self):
+        # font load
+        from cydeer.utils import fontloader
+        fontloader.load(pathlib.Path(
+            'C:/Windows/Fonts/MSGothic.ttc'), 20.0, self.io.Fonts.GetGlyphRangesJapanese())
+        import fontawesome47
+        font_range = (ctypes.c_ushort * 3)(*fontawesome47.RANGE, 0)
+        fontloader.load(fontawesome47.get_path(), 20.0,
+                        font_range, merge=True, monospace=True)
+        self.io.Fonts.Build()
 
     def save_ini(self) -> bytes:
         return imgui.SaveIniSettingsToMemory()
-
-    def __del__(self):
-        del self.controller
-        # save ini
-        del self.impl_gl
 
     def toolbar(self):
         import fontawesome47.icons_str as ICONS_FA
@@ -97,55 +93,18 @@ class GUI:
                 exit(1)
             imgui.EndMenu()
 
-    def _update(self):
+    def draw_imgui(self):
+        # update scene
+        if self.loader:
+            pos = self.playback.pos[0]
+            self.loader.set_time(pos)
+
         dockspace(*self.views, toolbar=self.toolbar, menu=self.menu)
-              
+
         if self.prop.selected:
             self.tree.push(self.prop.selected)
 
         self.prop.set(self.data, self.tree.get_selected(), self.loader)
-
-    def _update_view(self):
-        w, h = self.io.DisplaySize
-        self.controller.onResize(w, h)
-        x, y = self.io.MousePos
-        if self.io.MouseDown[0]:
-            self.controller.onLeftDown(x, y)
-        else:
-            self.controller.onLeftUp(x, y)
-        if self.io.MouseDown[1]:
-            self.controller.onRightDown(x, y)
-        else:
-            self.controller.onRightUp(x, y)
-        if self.io.MouseDown[2]:
-            self.controller.onMiddleDown(x, y)
-        else:
-            self.controller.onMiddleUp(x, y)
-        if self.io.MouseWheel:
-            self.controller.onWheel(int(-self.io.MouseWheel))
-        self.controller.onMotion(x, y)
-
-    def _new_frame(self):
-        self.impl_glfw.process_inputs()
-        imgui.NewFrame()
-        self._update()
-
-        # update controller
-        if not self.io.WantCaptureMouse:
-            self._update_view()
-
-        imgui.Render()
-
-    def render(self):
-        self._new_frame()
-
-        # render
-        GL.glClearColor(1., 1., 1., 1)
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
-
-        self.controller.draw()
-
-        self.impl_gl.render(imgui.GetDrawData())
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
@@ -164,13 +123,13 @@ class GUI:
             self.loader = gltf_loader.GltfLoader(self.data)
             scene = self.loader.load()
             scene.calc_world()
-            self.controller.scene.drawables = [scene]  # type: ignore
+            self.view.rendertarget.scene.drawables = [scene]  # type: ignore
 
             # fit camera
             from glglue.ctypesmath import AABB
             aabb = AABB.new_empty()
             aabb = scene.expand_aabb(aabb)
-            self.controller.camera.fit(*aabb)
+            self.view.rendertarget.camera.fit(*aabb)
 
             # animation
             if self.loader.animations:

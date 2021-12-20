@@ -1,10 +1,17 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, NamedTuple
 import pathlib
 import os
 import toml
-from .gui.glfw_window import WindowStatus
 
 INI_FILE = pathlib.Path(os.environ['USERPROFILE']) / 'gltfloupe.toml'
+
+
+class WindowStatus(NamedTuple):
+    x: int
+    y: int
+    width: int
+    height: int
+    is_maximized: bool
 
 
 def save(ini: str, window_status: WindowStatus):
