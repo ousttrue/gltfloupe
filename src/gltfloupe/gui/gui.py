@@ -9,30 +9,9 @@ import cydeer as imgui
 from gltfio.parser import GltfData
 from OpenGL import GL
 from .. import gltf_loader
+from cydeer.utils.dockspace import dockspace, DockView
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class View:
-    name: str
-    drawer: Callable[[], Any]
-    visible: ctypes.Array
-    use_begin: bool = True
-
-    def draw(self):
-        if not self.visible[0]:
-            return
-
-        imgui.SetNextWindowSize((550, 680), cond=imgui.ImGuiCond_.FirstUseEver)
-        if self.use_begin:
-            selected = None
-            if imgui.Begin(self.name, self.visible):
-                selected = self.drawer()
-            imgui.End()
-            return selected
-        else:
-            self.drawer(self.visible)  # type: ignore
 
 
 class GUI:
@@ -44,6 +23,7 @@ class GUI:
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
         self.io.IniFilename = None  # type: ignore
 
+        # font load
         from cydeer.utils import fontloader
         fontloader.load(pathlib.Path(
             'C:/Windows/Fonts/MSGothic.ttc'), 20.0, self.io.Fonts.GetGlyphRangesJapanese())
@@ -63,12 +43,6 @@ class GUI:
             '%(levelname)s:%(name)s:%(message)s'))
         logging.getLogger().handlers = [self.log_handler]
 
-        def show_metrics(p_open):
-            return imgui.ShowMetricsWindow(p_open)
-
-        def show_demo(p_open):
-            return imgui.ShowDemoWindow(p_open)
-
         from .prop import Prop
         self.prop = Prop()
 
@@ -76,15 +50,13 @@ class GUI:
         self.playback = Playback()
 
         self.views = [
-            View('json', self.tree.draw, (ctypes.c_bool * 1)(True)),
-            View('log', self.log_handler.draw, (ctypes.c_bool * 1)(True)),
-            View('prop', self.prop.draw, (ctypes.c_bool * 1)(True)),
-            View('playback', self.playback.draw, (ctypes.c_bool * 1)(True)),
+            DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw),
+            DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
+            DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
+            DockView('playback', (ctypes.c_bool * 1)(True), self.playback.draw),
             #
-            View('metrics', show_metrics, (ctypes.c_bool * 1)  # type: ignore
-                 (True), False),
-            View('demo', show_demo, (ctypes.c_bool * 1)  # type: ignore
-                 (True), False),
+            DockView('metrics', (ctypes.c_bool * 1)(True), imgui.ShowMetricsWindow),
+            DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow),
         ]
 
         # gl
@@ -108,42 +80,28 @@ class GUI:
         # save ini
         del self.impl_gl
 
+    def toolbar(self):
+        import fontawesome47.icons_str as ICONS_FA
+
+        if imgui.Button(ICONS_FA.ARROW_LEFT):
+            self.tree.back()
+
+        imgui.SameLine()
+        if imgui.Button(ICONS_FA.ARROW_RIGHT):
+            self.tree.forward()
+
+    def menu(self):
+        if imgui.BeginMenu(b"File", True):
+
+            if imgui.MenuItem(b"Quit", b'Cmd+Q', False, True):
+                exit(1)
+            imgui.EndMenu()
+
     def _update(self):
-        from .dockspace import dockspace
-        with dockspace('docking_space'):
-            import fontawesome47.icons_str as ICONS_FA
-
-            if imgui.Button(ICONS_FA.ARROW_LEFT):
-                self.tree.back()
-
-            imgui.SameLine()
-            if imgui.Button(ICONS_FA.ARROW_RIGHT):
-                self.tree.forward()
-
-        #
-        # imgui menu
-        #
-        if imgui.BeginMainMenuBar():
-            if imgui.BeginMenu(b"File", True):
-
-                if imgui.MenuItem(b"Quit", b'Cmd+Q', False, True):
-                    exit(1)
-                imgui.EndMenu()
-
-            if imgui.BeginMenu(b"View", True):
-                for v in self.views:
-                    imgui.MenuItem_2(v.name, b'', v.visible)
-                imgui.EndMenu()
-
-            imgui.EndMainMenuBar()
-
-        #
-        # imgui widgets
-        #
-        for v in self.views:
-            selected = v.draw()
-            if selected:
-                self.tree.push(selected)
+        dockspace(*self.views, toolbar=self.toolbar, menu=self.menu)
+              
+        if self.prop.selected:
+            self.tree.push(self.prop.selected)
 
         self.prop.set(self.data, self.tree.get_selected(), self.loader)
 

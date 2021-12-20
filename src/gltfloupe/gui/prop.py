@@ -65,7 +65,7 @@ class JumpContent(NamedTuple):
 class Item:
     name: str
     content: Union[TextContent, JumpContent, AccessorTable]
-    visible: ctypes.Array
+    visible: Optional[ctypes.Array] = None
 
     def draw(self):
         imgui.SetNextItemOpen(True, imgui.ImGuiCond_.Once)
@@ -78,6 +78,7 @@ class Prop:
         self.data: Optional[GltfData] = None
         self.key = ()
         self.contents: List[Item] = []
+        self.selected = None
 
     def set(self, data: Optional[GltfData], key: tuple, loader: Optional[GltfLoader]):
         if self.data == data and self.key == key:
@@ -104,40 +105,39 @@ class Prop:
 
                 case ('nodes', node_index, 'skin'):
                     self.contents.append(Item('node_debug', TextContent(node_debug(
-                        self.data, node_index, loader)), (ctypes.c_bool * 1)(True)))
+                        self.data, node_index, loader))))
 
                 case ('skins', skin_index):
                     # ref from
                     for node in self.data.nodes:
                         if node.skin and node.skin.index == skin_index:
                             self.contents.append(
-                                Item('ref from', JumpContent(('nodes', node.index)), (ctypes.c_bool * 1)(True)))
+                                Item('ref from', JumpContent(('nodes', node.index))))
 
                     from .. import skin_debug
                     self.contents.append(Item('skin_debug', TextContent(skin_debug.get_debug_info(
-                        self.data, skin_index, loader)), (ctypes.c_bool * 1)(True)))
+                        self.data, skin_index, loader))))
 
             match get_accessor(self.data, key):
                 case int() as accessor_index:
                     accessor = self.data.buffer_reader.read_accessor(
                         accessor_index)
                     self.contents.append(
-                        Item('accessor', AccessorTable(key, accessor), (ctypes.c_bool * 1)(True)))
+                        Item('accessor', AccessorTable(key, accessor)))
 
-    def draw(self) -> Optional[tuple]:
+    def draw(self, p_open: ctypes.Array):
         '''
         return selected keys
         '''
-        if not self.data:
-            imgui.Text('not gltf')
-            return
+        if imgui.Begin('prop', p_open):
+            if not self.data:
+                imgui.Text('not gltf')
+                return
 
-        imgui.TextUnformatted(str(self.key))
-
-        selected = None
-        for item in self.contents:
-            current = item.draw()
-            if current:
-                selected = current
-
-        return selected
+            imgui.TextUnformatted(str(self.key))
+            self.selected = None
+            for item in self.contents:
+                current = item.draw()
+                if current:
+                    self.selected = current
+        imgui.End()

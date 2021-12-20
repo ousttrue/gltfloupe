@@ -1,4 +1,5 @@
 import logging
+import ctypes
 import cydeer as imgui
 
 
@@ -20,21 +21,23 @@ class ImGuiLogHandler(logging.Handler):
     def write(self, m):
         pass
 
-    def draw(self):
-        # ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    def draw(self, p_open: ctypes.Array):
+        if imgui.Begin('log', p_open):
+            # ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-        # ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+            # ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
-        # ImGuiListClipper clipper;
-        # clipper.Begin(LineOffsets.Size);
-        # while (clipper.Step())
-        for log in self.logs:
-            imgui.TextUnformatted(log)
-        # clipper.End();
+            # ImGuiListClipper clipper;
+            # clipper.Begin(LineOffsets.Size);
+            # while (clipper.Step())
+            for log in self.logs:
+                imgui.TextUnformatted(log)
+            # clipper.End();
 
-        # if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-        #     ImGui::SetScrollHereY(1.0f);
+            # if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+            #     ImGui::SetScrollHereY(1.0f);
 
-        imgui.SetScrollHereY(1.0)
+            imgui.SetScrollHereY(1.0)
 
-        # ImGui::EndChild();
+            # ImGui::EndChild();
+        imgui.End()

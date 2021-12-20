@@ -1,4 +1,5 @@
 import logging
+import ctypes
 from typing import Union, Optional, Any, Tuple, List
 import cydeer as imgui
 import fontawesome47.icons_str as ICONS_FA
@@ -257,24 +258,26 @@ class JsonTree:
                         self._traverse(v, *keys, k)
             imgui.TreePop()
 
-    def draw(self):
-        if not self.root:
-            return
-        flags = (
-            imgui.ImGuiTableFlags_.BordersV
-            | imgui.ImGuiTableFlags_.BordersOuterH
-            | imgui.ImGuiTableFlags_.Resizable
-            | imgui.ImGuiTableFlags_.RowBg
-            | imgui.ImGuiTableFlags_.NoBordersInBody
-        )
-        if imgui.BeginTable("jsontree_table", 2, flags):
-            # header
-            imgui.TableSetupColumn("key")
-            imgui.TableSetupColumn("value")
-            imgui.TableHeadersRow()
+    def draw(self, p_open: ctypes.Array):
+        if imgui.Begin('json', p_open):
+            if not self.root:
+                return
+            flags = (
+                imgui.ImGuiTableFlags_.BordersV
+                | imgui.ImGuiTableFlags_.BordersOuterH
+                | imgui.ImGuiTableFlags_.Resizable
+                | imgui.ImGuiTableFlags_.RowBg
+                | imgui.ImGuiTableFlags_.NoBordersInBody
+            )
+            if imgui.BeginTable("jsontree_table", 2, flags):
+                # header
+                imgui.TableSetupColumn("key")
+                imgui.TableSetupColumn("value")
+                imgui.TableHeadersRow()
 
-            # body
-            for k, v in self.root.items():
-                self._traverse(v, k)
+                # body
+                for k, v in self.root.items():
+                    self._traverse(v, k)
 
-            imgui.EndTable()
+                imgui.EndTable()
+        imgui.End()
