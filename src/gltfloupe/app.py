@@ -25,6 +25,11 @@ def run():
                                    height=window_status.height if window_status else 720,
                                    is_maximized=window_status.is_maximized if window_status else False)
 
+    def close():
+        import glfw
+        glfw.set_window_should_close(loop.window, True)
+    controller.close_callback = close
+
     lastCount = 0
     while True:
         count = loop.begin_frame()

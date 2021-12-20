@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable
 import pathlib
 import ctypes
 import logging
@@ -26,6 +26,13 @@ class GUI(CydeerController):
             imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
         self.io.IniFilename = None  # type: ignore
 
+        # gltf
+        self.data: Optional[GltfData] = None
+        self.loader: Optional[gltf_loader.GltfLoader] = None
+
+        self.close_callback: Optional[Callable[[], None]] = None
+
+    def imgui_views(self):
         # views
         from .jsontree import JsonTree
         self.tree = JsonTree()
@@ -45,24 +52,18 @@ class GUI(CydeerController):
         from glglue.gl3.cameraview import CameraView
         self.view = CameraView()
 
-        self.views = [
-            DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw),
-            DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
-            DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
-            DockView('playback', (ctypes.c_bool * 1)
-                     (True), self.playback.draw),
-            DockView('view', (ctypes.c_bool * 1)(True), self.view.draw),
-            #
-            DockView('metrics', (ctypes.c_bool * 1)
-                     (True), imgui.ShowMetricsWindow),
-            DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow),
-        ]
+        yield DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw)
+        yield DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw)
+        yield DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw)
+        yield DockView('playback', (ctypes.c_bool * 1)
+                       (True), self.playback.draw)
+        yield DockView('view', (ctypes.c_bool * 1)(True), self.view.draw)
+        #
+        yield DockView('metrics', (ctypes.c_bool * 1)
+                       (True), imgui.ShowMetricsWindow)
+        yield DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow)
 
-        # gl
-        self.data: Optional[GltfData] = None
-        self.loader: Optional[gltf_loader.GltfLoader] = None
-
-    def load_font(self):
+    def imgui_font(self):
         # font load
         from cydeer.utils import fontloader
         fontloader.load(pathlib.Path(
@@ -90,10 +91,11 @@ class GUI(CydeerController):
         if imgui.BeginMenu(b"File", True):
 
             if imgui.MenuItem(b"Quit", b'Cmd+Q', False, True):
-                exit(1)
+                if self.close_callback:
+                    self.close_callback()
             imgui.EndMenu()
 
-    def draw_imgui(self):
+    def imgui_draw(self):
         # update scene
         if self.loader:
             pos = self.playback.pos[0]
