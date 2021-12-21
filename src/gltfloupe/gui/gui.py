@@ -37,11 +37,11 @@ class GUI(CydeerController):
         from .jsontree import JsonTree
         self.tree = JsonTree()
 
-        from .loghandler import ImGuiLogHandler
+        from cydeer.utils.loghandler import ImGuiLogHandler
         self.log_handler = ImGuiLogHandler()
         self.log_handler.setFormatter(logging.Formatter(
-            '%(levelname)s:%(name)s:%(message)s'))
-        logging.getLogger().handlers = [self.log_handler]
+            "%(name)s:%(lineno)s[%(levelname)s]%(message)s"))
+        self.log_handler.register_root()
 
         from .prop import Prop
         self.prop = Prop()
