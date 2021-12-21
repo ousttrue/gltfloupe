@@ -32,7 +32,7 @@ class GUI(CydeerController):
 
         self.close_callback: Optional[Callable[[], None]] = None
 
-    def imgui_views(self):
+    def imgui_create_docks(self):
         # views
         from .jsontree import JsonTree
         self.tree = JsonTree()
@@ -49,8 +49,8 @@ class GUI(CydeerController):
         from .animation import Playback
         self.playback = Playback()
 
-        from glglue.gl3.cameraview import CameraView
-        self.view = CameraView()
+        from glglue.gl3.renderview import RenderView
+        self.view = RenderView()
 
         yield DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw)
         yield DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw)
@@ -101,7 +101,7 @@ class GUI(CydeerController):
             pos = self.playback.pos[0]
             self.loader.set_time(pos)
 
-        dockspace(*self.views, toolbar=self.toolbar, menu=self.menu)
+        dockspace(*self.imgui_docks, toolbar=self.toolbar, menu=self.menu)
 
         if self.prop.selected:
             self.tree.push(self.prop.selected)
@@ -125,13 +125,13 @@ class GUI(CydeerController):
             self.loader = gltf_loader.GltfLoader(self.data)
             scene = self.loader.load()
             scene.calc_world()
-            self.view.rendertarget.scene.drawables = [scene]  # type: ignore
+            self.view.scene.drawables = [scene]  # type: ignore
 
             # fit camera
             from glglue.ctypesmath import AABB
             aabb = AABB.new_empty()
             aabb = scene.expand_aabb(aabb)
-            self.view.rendertarget.camera.fit(*aabb)
+            self.view.camera.fit(*aabb)
 
             # animation
             if self.loader.animations:
