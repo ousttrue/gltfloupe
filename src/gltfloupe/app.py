@@ -1,5 +1,3 @@
-import sys
-import pathlib
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,21 +7,21 @@ def run():
     logging.basicConfig(level=logging.DEBUG)
 
     from . import config
-    ini, window_status = config.load()
+    ini, window_config = config.load()
 
-    logger.debug(f'{window_status}')
+    logger.debug(f'{window_config}')
 
     from .gui.gui import GUI
     controller = GUI(ini)
+    import sys
     if len(sys.argv) > 1:
+        import pathlib
         controller.open(pathlib.Path(sys.argv[1]))
 
     import glglue.glfw
     loop = glglue.glfw.LoopManager(controller,
                                    title='glfw loupe',
-                                   width=window_status.width if window_status else 1280,
-                                   height=window_status.height if window_status else 720,
-                                   is_maximized=window_status.is_maximized if window_status else False)
+                                   config=window_config)
 
     def close():
         import glfw
@@ -34,7 +32,7 @@ def run():
     while True:
         count = loop.begin_frame()
         if not count:
-            window_status = loop.get_status()
+            window_config = loop.get_config()
             break
         d = count - lastCount
         lastCount = count
@@ -44,4 +42,4 @@ def run():
             loop.end_frame()
 
     ini = controller.save_ini()
-    config.save(ini.decode('utf-8'), window_status)  # type: ignore
+    config.save(ini.decode('utf-8'), window_config)  # type: ignore

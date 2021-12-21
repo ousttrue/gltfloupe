@@ -52,16 +52,18 @@ class GUI(CydeerController):
         from glglue.gl3.renderview import RenderView
         self.view = RenderView()
 
-        yield DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw)
-        yield DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw)
-        yield DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw)
-        yield DockView('playback', (ctypes.c_bool * 1)
-                       (True), self.playback.draw)
-        yield DockView('view', (ctypes.c_bool * 1)(True), self.view.draw)
-        #
-        yield DockView('metrics', (ctypes.c_bool * 1)
-                       (True), imgui.ShowMetricsWindow)
-        yield DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow)
+        return [
+            DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw),
+            DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
+            DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
+            DockView('playback', (ctypes.c_bool * 1)
+                     (True), self.playback.draw),
+            DockView('view', (ctypes.c_bool * 1)(True), self.view.draw),
+            #
+            DockView('metrics', (ctypes.c_bool * 1)
+                     (True), imgui.ShowMetricsWindow),
+            DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow),
+        ]
 
     def imgui_font(self):
         # font load
@@ -101,7 +103,7 @@ class GUI(CydeerController):
             pos = self.playback.pos[0]
             self.loader.set_time(pos)
 
-        dockspace(*self.imgui_docks, toolbar=self.toolbar, menu=self.menu)
+        dockspace(self.imgui_docks, toolbar=self.toolbar, menu=self.menu)
 
         if self.prop.selected:
             self.tree.push(self.prop.selected)
