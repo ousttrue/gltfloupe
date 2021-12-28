@@ -7,6 +7,7 @@ from glglue.gl3.cydeercontroller import CydeerController
 #
 import cydeer as imgui
 from cydeer.utils.dockspace import dockspace, DockView
+from cydeer.utils import filedialog
 #
 from gltfio.parser import GltfData
 from .. import gltf_loader
@@ -31,6 +32,9 @@ class GUI(CydeerController):
         self.loader: Optional[gltf_loader.GltfLoader] = None
 
         self.close_callback: Optional[Callable[[], None]] = None
+
+        # file dialog
+        filedialog.initialize()
 
     def imgui_create_docks(self):
         # views
@@ -91,8 +95,9 @@ class GUI(CydeerController):
 
     def menu(self):
         if imgui.BeginMenu(b"File", True):
+            filedialog.open_menu(b"Open")
 
-            if imgui.MenuItem(b"Quit", b'Cmd+Q', False, True):
+            if imgui.MenuItem(b"Quit", None, False, True):
                 if self.close_callback:
                     self.close_callback()
             imgui.EndMenu()
@@ -109,6 +114,10 @@ class GUI(CydeerController):
             self.tree.push(self.prop.selected)
 
         self.prop.set(self.data, self.tree.get_selected(), self.loader)
+
+        result = filedialog.get_result()
+        if result:
+            self.open(result)
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
