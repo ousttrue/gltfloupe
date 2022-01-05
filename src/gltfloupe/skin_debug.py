@@ -2,22 +2,14 @@ import math
 from typing import Tuple
 from gltfio.types import GltfNode
 from gltfio.parser import GltfData
+from .gltf_loader import GltfLoader
 
 
-def translation(t) -> str:
-    return f'position [{t[0]:.2f}, {t[1]:.2f}, {t[2]:.2f}]'
+def tuple_3f(x, y, z):
+    return f'({x:.3f}, {y:.3f}, {z:.3f})'
 
 
-def inverseMatrix(m) -> str:
-    return f'[{m[12]:.2f}, {m[13]:.2f}, {m[14]:.2f}, {m[15]:.2f}]'
-
-
-def get_world_position(data: GltfData, node: GltfNode) -> Tuple[float, float, float]:
-    # TODO:
-    return 0, 0, 0
-
-
-def info(data: GltfData, skin_index: int):
+def get_debug_info(data: GltfData, skin_index: int, loader: GltfLoader):
     skin = data.gltf['skins'][skin_index]
     joints = skin['joints']
 
@@ -28,19 +20,21 @@ def info(data: GltfData, skin_index: int):
 
     text = ''
     for i, joint in enumerate(joints):
-        # node = gltf['nodes'][joint]
-        node = data.nodes[joint]
         matrix = matrices.get_item(i)
+
+        node = loader.nodes[joint]
+        world = node.world_matrix
+        mp = (matrix[12], matrix[13], matrix[14])
+        wp = (world._41, world._42, world._43)
 
         validation = ''
         EPS = 1e-5
-        world_position = get_world_position(data, node)
-        if math.fabs(world_position[0] + matrix[12]) > EPS:
+        if math.fabs(mp[0] + wp[0]) > EPS:
             validation += 'X'
-        if math.fabs(world_position[1] + matrix[13]) > EPS:
+        if math.fabs(mp[1] + wp[1]) > EPS:
             validation += 'Y'
-        if math.fabs(world_position[2] + matrix[14]) > EPS:
+        if math.fabs(mp[2] + wp[2]) > EPS:
             validation += 'Z'
 
-        text += f'{joint}: {translation(world_position)}, {inverseMatrix(matrix)}{validation}\n'
+        text += f'[{joint}:{node.name}] {tuple_3f(*mp)}, {tuple_3f(*wp)}{validation}\n'
     return text

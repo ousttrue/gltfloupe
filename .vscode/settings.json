@@ -1,0 +1,22 @@
+{
+    "cSpell.words": [
+        "aabb",
+        "glfw",
+        "glglue",
+        "gltf",
+        "gltfio",
+        "gltfloupe",
+        "imgui",
+        "opengl",
+        "pyimgui"
+    ],
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}
