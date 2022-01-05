@@ -3,11 +3,11 @@ import pathlib
 import ctypes
 import logging
 #
-from glglue.gl3.cydeercontroller import CydeerController
+from glglue.gl3.pydearcontroller import PydearController
 #
-import cydeer as imgui
-from cydeer.utils.dockspace import dockspace, DockView
-from cydeer.utils import filedialog
+import pydear as imgui
+from pydear.utils.dockspace import dockspace, DockView
+from pydear.utils import filedialog
 #
 from gltfio.parser import GltfData
 from .. import gltf_loader
@@ -15,7 +15,7 @@ from .. import gltf_loader
 logger = logging.getLogger(__name__)
 
 
-class GUI(CydeerController):
+class GUI(PydearController):
     def __init__(self, ini:  Optional[str]) -> None:
         super().__init__()
 
@@ -41,7 +41,7 @@ class GUI(CydeerController):
         from .jsontree import JsonTree
         self.tree = JsonTree()
 
-        from cydeer.utils.loghandler import ImGuiLogHandler
+        from pydear.utils.loghandler import ImGuiLogHandler
         self.log_handler = ImGuiLogHandler()
         self.log_handler.setFormatter(logging.Formatter(
             "%(name)s:%(lineno)s[%(levelname)s]%(message)s"))
@@ -71,7 +71,7 @@ class GUI(CydeerController):
 
     def imgui_font(self):
         # font load
-        from cydeer.utils import fontloader
+        from pydear.utils import fontloader
         fontloader.load(pathlib.Path(
             'C:/Windows/Fonts/MSGothic.ttc'), 20.0, self.io.Fonts.GetGlyphRangesJapanese())
         import fontawesome47

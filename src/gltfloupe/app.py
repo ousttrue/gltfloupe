@@ -42,4 +42,4 @@ def run():
             loop.end_frame()
 
     ini = controller.save_ini()
-    config.save(ini.decode('utf-8'), window_config)  # type: ignore
+    config.save(ini, window_config)  # type: ignore

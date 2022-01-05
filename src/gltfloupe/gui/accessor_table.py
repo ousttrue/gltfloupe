@@ -1,7 +1,7 @@
 from typing import Optional
 from gltfio import GltfData
 from gltfio.types import GltfAccessorSlice
-import cydeer as imgui
+import pydear as imgui
 from ..jsonutil import get_value
 
 

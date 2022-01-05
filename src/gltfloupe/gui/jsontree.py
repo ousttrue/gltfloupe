@@ -1,7 +1,7 @@
 import logging
 import ctypes
 from typing import Union, Optional, Any, Tuple, List
-import cydeer as imgui
+import pydear as imgui
 import fontawesome47.icons_str as ICONS_FA
 logger = logging.getLogger(__name__)
 
