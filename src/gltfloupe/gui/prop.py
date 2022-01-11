@@ -130,14 +130,13 @@ class Prop:
         return selected keys
         '''
         if imgui.Begin('prop', p_open):
-            if not self.data:
-                imgui.Text('not gltf')
-                return
-
-            imgui.TextUnformatted(str(self.key))
-            self.selected = None
-            for item in self.contents:
-                current = item.draw()
-                if current:
-                    self.selected = current
+            if self.data:
+                imgui.TextUnformatted(str(self.key))
+                self.selected = None
+                for item in self.contents:
+                    current = item.draw()
+                    if current:
+                        self.selected = current
+            else:
+                imgui.TextUnformatted('not gltf')
         imgui.End()
