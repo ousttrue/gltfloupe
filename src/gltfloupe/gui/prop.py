@@ -4,7 +4,7 @@ from typing import Optional, List, NamedTuple, Union
 import dataclasses
 import json
 import io
-import pydear as imgui
+from pydear import imgui as ImGui
 from gltfio.parser import GltfData
 from ..gltf_loader import GltfLoader
 from ..jsonutil import get_value, to_pretty
@@ -50,14 +50,14 @@ class TextContent(NamedTuple):
     content: str
 
     def draw(self):
-        imgui.TextUnformatted(self.content)
+        ImGui.TextUnformatted(self.content)
 
 
 class JumpContent(NamedTuple):
     keys: tuple
 
     def draw(self):
-        if imgui.Button(str(self.keys)):
+        if ImGui.Button(str(self.keys)):
             return self.keys
 
 
@@ -68,8 +68,8 @@ class Item:
     visible: Optional[ctypes.Array] = None
 
     def draw(self):
-        imgui.SetNextItemOpen(True, imgui.ImGuiCond_.Once)
-        if imgui.CollapsingHeader_2(self.name, self.visible):
+        ImGui.SetNextItemOpen(True, ImGui.ImGuiCond_.Once)
+        if ImGui.CollapsingHeader_2(self.name, self.visible):
             return self.content.draw()
 
 
@@ -129,14 +129,14 @@ class Prop:
         '''
         return selected keys
         '''
-        if imgui.Begin('prop', p_open):
+        if ImGui.Begin('prop', p_open):
             if self.data:
-                imgui.TextUnformatted(str(self.key))
+                ImGui.TextUnformatted(str(self.key))
                 self.selected = None
                 for item in self.contents:
                     current = item.draw()
                     if current:
                         self.selected = current
             else:
-                imgui.TextUnformatted('not gltf')
-        imgui.End()
+                ImGui.TextUnformatted('not gltf')
+        ImGui.End()

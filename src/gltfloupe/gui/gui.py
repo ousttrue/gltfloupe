@@ -5,8 +5,8 @@ import logging
 #
 from glglue.gl3.pydearcontroller import PydearController
 #
-import pydear as imgui
-from pydear.utils.dockspace import dockspace, DockView
+from pydear import imgui as ImGui
+from pydear.utils.dockspace import show_docks, Dock
 from pydear.utils import filedialog
 #
 from gltfio.parser import GltfData
@@ -19,12 +19,12 @@ class GUI(PydearController):
     def __init__(self, ini:  Optional[str]) -> None:
         super().__init__()
 
-        # imgui
-        imgui.CreateContext()
-        self.io: imgui.ImGuiIO = imgui.GetIO()
-        self.io.ConfigFlags |= imgui.ImGuiConfigFlags_.DockingEnable
+        # ImGui
+        ImGui.CreateContext()
+        self.io: ImGui.ImGuiIO = ImGui.GetIO()
+        self.io.ConfigFlags |= ImGui.ImGuiConfigFlags_.DockingEnable
         if isinstance(ini, str):
-            imgui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
+            ImGui.LoadIniSettingsFromMemory(ini.encode('utf-8'))
         self.io.IniFilename = None  # type: ignore
 
         # gltf
@@ -57,16 +57,16 @@ class GUI(PydearController):
         self.view = RenderView()
 
         return [
-            DockView('json', (ctypes.c_bool * 1)(True), self.tree.draw),
-            DockView('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
-            DockView('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
-            DockView('playback', (ctypes.c_bool * 1)
+            Dock('json', (ctypes.c_bool * 1)(True), self.tree.draw),
+            Dock('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
+            Dock('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
+            Dock('playback', (ctypes.c_bool * 1)
                      (True), self.playback.draw),
-            DockView('view', (ctypes.c_bool * 1)(True), self.view.draw),
+            Dock('view', (ctypes.c_bool * 1)(True), self.view.draw),
             #
-            DockView('metrics', (ctypes.c_bool * 1)
-                     (True), imgui.ShowMetricsWindow),
-            DockView('demo', (ctypes.c_bool * 1)(True), imgui.ShowDemoWindow),
+            Dock('metrics', (ctypes.c_bool * 1)
+                     (True), ImGui.ShowMetricsWindow),
+            Dock('demo', (ctypes.c_bool * 1)(True), ImGui.ShowDemoWindow),
         ]
 
     def imgui_font(self):
@@ -81,26 +81,26 @@ class GUI(PydearController):
         self.io.Fonts.Build()
 
     def save_ini(self) -> bytes:
-        return imgui.SaveIniSettingsToMemory()
+        return ImGui.SaveIniSettingsToMemory()
 
     def toolbar(self):
         import fontawesome47.icons_str as ICONS_FA
 
-        if imgui.Button(ICONS_FA.ARROW_LEFT):
+        if ImGui.Button(ICONS_FA.ARROW_LEFT):
             self.tree.back()
 
-        imgui.SameLine()
-        if imgui.Button(ICONS_FA.ARROW_RIGHT):
+        ImGui.SameLine()
+        if ImGui.Button(ICONS_FA.ARROW_RIGHT):
             self.tree.forward()
 
     def menu(self):
-        if imgui.BeginMenu(b"File", True):
+        if ImGui.BeginMenu(b"File", True):
             filedialog.open_menu(b"Open")
 
-            if imgui.MenuItem(b"Quit", None, False, True):
+            if ImGui.MenuItem(b"Quit", None, False, True):
                 if self.close_callback:
                     self.close_callback()
-            imgui.EndMenu()
+            ImGui.EndMenu()
 
     def imgui_draw(self):
         # update scene
@@ -108,7 +108,7 @@ class GUI(PydearController):
             pos = self.playback.pos[0]
             self.loader.set_time(pos)
 
-        dockspace(self.imgui_docks, toolbar=self.toolbar, menu=self.menu)
+        show_docks(self.imgui_docks, toolbar=self.toolbar, menu=self.menu)
 
         if self.prop.selected:
             self.tree.push(self.prop.selected)

@@ -1,6 +1,6 @@
 from typing import Optional
 import ctypes
-import pydear as ImGui
+from pydear import imgui as ImGui
 
 
 class Playback:
