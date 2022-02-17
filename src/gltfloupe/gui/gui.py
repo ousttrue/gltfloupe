@@ -7,7 +7,6 @@ from glglue.gl3.pydearcontroller import PydearController
 #
 from pydear import imgui as ImGui
 from pydear.utils.dockspace import show_docks, Dock
-from pydear.utils import filedialog
 #
 from gltfio.parser import GltfData
 from .. import gltf_loader
@@ -32,9 +31,6 @@ class GUI(PydearController):
         self.loader: Optional[gltf_loader.GltfLoader] = None
 
         self.close_callback: Optional[Callable[[], None]] = None
-
-        # file dialog
-        filedialog.initialize()
 
     def imgui_create_docks(self):
         # views
@@ -61,11 +57,11 @@ class GUI(PydearController):
             Dock('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
             Dock('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
             Dock('playback', (ctypes.c_bool * 1)
-                     (True), self.playback.draw),
+                 (True), self.playback.draw),
             Dock('view', (ctypes.c_bool * 1)(True), self.view.draw),
             #
             Dock('metrics', (ctypes.c_bool * 1)
-                     (True), ImGui.ShowMetricsWindow),
+                 (True), ImGui.ShowMetricsWindow),
             Dock('demo', (ctypes.c_bool * 1)(True), ImGui.ShowDemoWindow),
         ]
 
@@ -95,7 +91,7 @@ class GUI(PydearController):
 
     def menu(self):
         if ImGui.BeginMenu(b"File", True):
-            filedialog.open_menu(b"Open")
+            pass
 
             if ImGui.MenuItem(b"Quit", None, False, True):
                 if self.close_callback:
@@ -114,10 +110,6 @@ class GUI(PydearController):
             self.tree.push(self.prop.selected)
 
         self.prop.set(self.data, self.tree.get_selected(), self.loader)
-
-        result = filedialog.get_result()
-        if result:
-            self.open(result)
 
     def open(self, file: pathlib.Path):
         logger.info(f'load: {file.name}')
