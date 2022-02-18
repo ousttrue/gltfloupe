@@ -40,7 +40,10 @@ def _to_string(w: io.IOBase, value, level=0, is_value=False):
             w.write(f'{indent}}}')
         case str():
             # quote
-            w.write(f'"{value}"')
+            if len(value) > 100:
+                w.write(f'"{value[:8]}..."')
+            else:
+                w.write(f'"{value}"')
         case True:
             w.write('true')
         case False:

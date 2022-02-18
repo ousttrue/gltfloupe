@@ -1,7 +1,7 @@
 from typing import Optional
 from gltfio import GltfData
 from gltfio.types import GltfAccessorSlice
-import pydear as imgui
+import pydear.imgui as ImGui
 from ..jsonutil import get_value
 
 THRESHOLD = 1e-5
@@ -32,60 +32,60 @@ class AccessorTable:
         self.view = view
 
     def draw(self):
-        imgui.TextUnformatted(f'count: {self.view.get_count()}')
+        ImGui.TextUnformatted(f'count: {self.view.get_count()}')
         flags = (
-            imgui.ImGuiTableFlags_.BordersV
-            | imgui.ImGuiTableFlags_.BordersOuterH
-            | imgui.ImGuiTableFlags_.Resizable
-            | imgui.ImGuiTableFlags_.RowBg
-            | imgui.ImGuiTableFlags_.NoBordersInBody
+            ImGui.ImGuiTableFlags_.BordersV
+            | ImGui.ImGuiTableFlags_.BordersOuterH
+            | ImGui.ImGuiTableFlags_.Resizable
+            | ImGui.ImGuiTableFlags_.RowBg
+            | ImGui.ImGuiTableFlags_.NoBordersInBody
         )
         cols = self.view.element_count+1
         if self.key[-1] == 'WEIGHTS_0':
             cols += 1
-        if imgui.BeginTable("jsontree_table", cols, flags):
+        if ImGui.BeginTable("jsontree_table", cols, flags):
             # header
-            # imgui.TableSetupScrollFreeze(0, 1); // Make top row always visible
-            imgui.TableSetupColumn('index')
+            # ImGui.TableSetupScrollFreeze(0, 1); // Make top row always visible
+            ImGui.TableSetupColumn('index')
             for i in range(self.view.element_count):
-                imgui.TableSetupColumn(f'{i}')
+                ImGui.TableSetupColumn(f'{i}')
             if self.key[-1] == 'WEIGHTS_0':
-                imgui.TableSetupColumn(f'sum')
-            imgui.TableHeadersRow()
+                ImGui.TableSetupColumn(f'sum')
+            ImGui.TableHeadersRow()
 
             # body
-            # imgui._ImGuiListClipper clipper;
+            # ImGui._ImGuiListClipper clipper;
 
             it = iter(self.view.scalar_view)
             i = 0
             count = self.view.get_count()
             while i < count:
-                imgui.TableNextRow()
+                ImGui.TableNextRow()
                 # index
-                imgui.TableNextColumn()
-                imgui.TextUnformatted(f'{i:05}')
+                ImGui.TableNextColumn()
+                ImGui.TextUnformatted(f'{i:05}')
                 #
                 total = 0
                 for j in range(self.view.element_count):
-                    imgui.TableNextColumn()
+                    ImGui.TableNextColumn()
                     value = next(it)
                     total += value
-                    imgui.TextUnformatted(f'{value:.3f}')
+                    ImGui.TextUnformatted(f'{value:.3f}')
                 if self.key[-1] == 'WEIGHTS_0':
-                    imgui.TableNextColumn()
+                    ImGui.TableNextColumn()
 
                     d = total-1
                     if d > THRESHOLD:
-                        imgui.PushStyleColor(
-                            imgui.ImGuiCol_.Text, color_32(255, 0, 0, 255))
+                        ImGui.PushStyleColor(
+                            ImGui.ImGuiCol_.Text, color_32(255, 0, 0, 255))
                     elif d < -THRESHOLD:
-                        imgui.PushStyleColor(
-                            imgui.ImGuiCol_.Text, color_32(0, 0, 255, 255))
+                        ImGui.PushStyleColor(
+                            ImGui.ImGuiCol_.Text, color_32(0, 0, 255, 255))
                     else:
-                        imgui.PushStyleColor(
-                            imgui.ImGuiCol_.Text, color_32(128, 128, 128, 255))
-                    imgui.TextUnformatted(f'{total:.3f}')
-                    imgui.PopStyleColor()
+                        ImGui.PushStyleColor(
+                            ImGui.ImGuiCol_.Text, color_32(128, 128, 128, 255))
+                    ImGui.TextUnformatted(f'{total:.3f}')
+                    ImGui.PopStyleColor()
                 i += 1
 
-            imgui.EndTable()
+            ImGui.EndTable()
