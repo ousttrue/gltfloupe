@@ -21,6 +21,9 @@ def load() -> Tuple[Optional[str], Optional[WindowConfig]]:
     try:
         src = INI_FILE.read_bytes().decode('utf-8')
         data = toml.loads(src)
-        return data['ini'], WindowConfig(**data['window'])
+        config = WindowConfig(**data['window'])
+        assert(config.width)
+        assert(config.height)
+        return data['ini'], config
     except Exception:
         return None, None

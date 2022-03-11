@@ -56,16 +56,14 @@ class GUI(PydearController):
         self.view = RenderView()
 
         return [
-            Dock('json', (ctypes.c_bool * 1)(True), self.tree.draw),
-            Dock('log', (ctypes.c_bool * 1)(True), self.log_handler.draw),
-            Dock('prop', (ctypes.c_bool * 1)(True), self.prop.draw),
-            Dock('playback', (ctypes.c_bool * 1)
-                 (True), self.playback.draw),
-            Dock('view', (ctypes.c_bool * 1)(True), self.view.draw),
+            Dock('json', self.tree.draw, (ctypes.c_bool * 1)(True)),
+            Dock('log', self.log_handler.draw, (ctypes.c_bool * 1)(True)),
+            Dock('prop', self.prop.draw, (ctypes.c_bool * 1)(True)),
+            Dock('playback', self.playback.draw, (ctypes.c_bool * 1)(True)),
+            Dock('view', self.view.draw, (ctypes.c_bool * 1)(True)),
             #
-            Dock('metrics', (ctypes.c_bool * 1)
-                 (True), ImGui.ShowMetricsWindow),
-            Dock('demo', (ctypes.c_bool * 1)(True), ImGui.ShowDemoWindow),
+            Dock('metrics', ImGui.ShowMetricsWindow, (ctypes.c_bool * 1)(True)),
+            Dock('demo', ImGui.ShowDemoWindow, (ctypes.c_bool * 1)(True)),
         ]
 
     def imgui_font(self):
